@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - PassQuestion</title>
+    
+<script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define Neon Green Color and Glow Effects (Consistent with Login) */
+        :root {
+            /* Neon Green (Bright Lime) */
+            --color-primary: 50 255 100; 
+            /* Deep Black/Dark Blue Background for contrast */
+            --color-dark-bg: 5 5 15; 
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            /* Set a solid deep black background */
+            background-color: rgb(var(--color-dark-bg)); 
+            
+            /* Crucial: Set min-height to allow full-screen effect, but remove fixed centering to allow scrolling */
+            min-height: 100vh;
+            padding: 2rem 1rem; /* Add generous padding top/bottom */
+            position: relative; 
+            color: #fff;
+            /* FIX: Removed overflow: hidden to allow scrolling */
+        }
+
+        /* Center the content container within the scrollable body */
+        .content-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Use min-height to ensure vertical centering if content is short */
+            padding: 0;
+            margin: 0 auto; /* Center horizontally */
+        }
+        
+        /* Full-screen background image */
+        .background-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background-image: url('https://static.vecteezy.com/system/resources/previews/026/190/465/large_2x/abstract-hexagonal-technology-hitech-background-neon-green-black-free-photo.jpg'); 
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.5) contrast(1.2); 
+        }
+        
+        /* Keyframe for subtle button pulse effect */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(var(--color-primary), 0.6), 0 0 5px rgba(var(--color-primary), 0.3); }
+            50% { box-shadow: 0 0 15px rgba(var(--color-primary), 0.8), 0 0 8px rgba(var(--color-primary), 0.5); }
+        }
+
+        /* Utility class for neon buttons with glow */
+        .btn-neon {
+            background-color: rgb(var(--color-primary));
+            color: rgb(var(--color-dark-bg)); 
+            box-shadow: 0 0 15px rgba(var(--color-primary), 0.7); 
+            transition: all 0.2s ease-in-out;
+            animation: pulse-glow 3s infinite alternate; 
+        }
+        .btn-neon:hover {
+            box-shadow: 0 0 30px rgba(var(--color-primary), 1); 
+            transform: translateY(-2px);
+        }
+
+        /* Utility class for neon text */
+        .text-neon {
+            color: rgb(var(--color-primary));
+            text-shadow: 0 0 8px rgba(var(--color-primary), 0.8);
+        }
+        
+        /* Custom focus style for inputs with neon glow border */
+        .focus-neon:focus {
+            outline: none;
+            --tw-ring-opacity: 1;
+            --tw-ring-color: rgb(var(--color-primary));
+            border-color: rgb(var(--color-primary));
+            box-shadow: 0 0 10px rgba(var(--color-primary), 0.6);
+        }
+
+        /* Inputs will now be directly over the background image, with dark transparent styling */
+        .input-dark-transparent {
+            background-color: rgba(0, 0, 0, 0.4); 
+            border: 1px solid rgba(50, 255, 100, 0.2); 
+            color: #fff;
+        }
+        .input-dark-transparent::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Style for the blurred section container itself */
+        .blurred-login-section {
+            position: relative; 
+            z-index: 10; 
+            width: 100%;
+            max-width: 28rem; 
+            padding: 2rem; 
+            border-radius: 1rem; 
+            
+            /* Apply backdrop blur and a slight dark overlay to section */
+            background-color: rgba(0, 0, 0, 0.4); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            
+            /* Optional: subtle border glow for the section itself */
+            border: 1px solid rgba(50, 255, 100, 0.1);
+        }
+        
+        /* Info tooltip style */
+        .info-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        
+        .info-tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            border: 1px solid rgba(50, 255, 100, 0.3);
+        }
+        
+        .info-tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    
+<div class="background-image"></div>
+    
+<div class="fixed inset-0 bg-repeat opacity-5 z-[1]" style="background-image: url('data:image/svg+xml;utf8,<svg width=\'10\' height=\'10\' viewBox=\'0 0 10 10\' xmlns=\'http://www.w3.org/2000/svg\'><rect width=\'1\' height=\'1\' fill=\'%230a0a0a\'/><rect x=\'5\' y=\'5\' width=\'1\' height=\'1\' fill=\'%230a0a0a\'/></svg>');"></div>
+    
+<!-- New Content Wrapper for scrollable centering -->
+<div class="content-wrapper">
+    <!-- Using the blurred-login-section class for styling -->
+    <section class="flex flex-col items-center justify-center relative text-center px-6 overflow-hidden blurred-login-section">
+            
+            <h2 class="text-4xl font-bold text-gray-50 mb-2">Create Account</h2>
+            <p class="text-gray-300 mb-10">
+                Join <span class="text-neon font-semibold">Passco</span> today and start your journey to smarter studying
+            </p>
+
+            <!-- Signup Form -->
+            <form id="signupForm" class="space-y-5 w-full">
+                <div>
+                    <input type="text" id="username" placeholder="Full Name" required
+                        class="w-full px-5 py-3 rounded-xl input-dark-transparent focus:outline-none focus:ring-2 focus-neon">
+                </div>
+
+                <div>
+                    <input type="email" id="email" placeholder="Email address" required
+                        class="w-full px-5 py-3 rounded-xl input-dark-transparent focus:outline-none focus:ring-2 focus-neon">
+                </div>
+
+                <div class="relative">
+                    <input type="password" id="password" placeholder="Password" required
+                        class="w-full px-5 py-3 pr-12 rounded-xl input-dark-transparent focus:outline-none focus:ring-2 focus-neon">
+                    <button type="button" onclick="window.togglePassword('password','togglePasswordIcon1')" class="absolute right-4 top-3.5 text-gray-400 hover:text-neon transition">
+                        <svg id="togglePasswordIcon1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12 18 19.5 12 19.5 2.25 12 2.25 12z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="relative">
+                    <input type="password" id="confirm_password" placeholder="Confirm password" required
+                        class="w-full px-5 py-3 pr-12 rounded-xl input-dark-transparent focus:outline-none focus:ring-2 focus-neon">
+                    <button type="button" onclick="window.togglePassword('confirm_password','togglePasswordIcon2')" class="absolute right-4 top-3.5 text-gray-400 hover:text-neon transition">
+                        <svg id="togglePasswordIcon2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12 18 19.5 12 19.5 2.25 12 2.25 12z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" />
+                        </svg>
+                    </button>
+                    <p id="error-message" class="text-red-500 text-sm mt-2 hidden text-left">Passwords do not match.</p>
+                </div>
+
+                <!-- Verification Code Input (for regular users) -->
+                <div id="verificationCodeContainer">
+                    <div class="flex items-center justify-between mb-1">
+                        <label for="verificationCode" class="text-gray-300 text-sm">
+                            Verification Code
+                            <span class="info-tooltip ml-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="tooltip-text">
+                                    Required for regular users. Get this code after paying 50 GHS. Admin accounts don't need this.
+                                </span>
+                            </span>
+                        </label>
+                        <span class="text-xs text-gray-400">Required for users</span>
+                    </div>
+                    <input type="text" id="verificationCode" placeholder="Enter your verification code (e.g., PQ-ABCD-1234)" required
+                        class="w-full px-5 py-3 rounded-xl input-dark-transparent focus:outline-none focus:ring-2 focus-neon">
+                </div>
+
+                <!-- Admin checkbox + hidden code input -->
+                <div class="flex items-center gap-2 pt-2">
+                    <input type="checkbox" id="isAdmin" class="h-4 w-4 text-neon border-gray-700 bg-gray-800 rounded checked:bg-[rgb(var(--color-primary))] checked:border-[rgb(var(--color-primary))]">
+                    <label for="isAdmin" class="text-gray-300">I am an admin</label>
+                </div>
+
+                <div id="adminCodeContainer" class="hidden">
+                    <input type="text" id="adminCode" placeholder="Enter admin code"
+                        class="w-full px-5 py-3 rounded-xl input-dark-transparent focus:outline-none focus:ring-2 focus-neon mt-2">
+                </div>
+
+                <button type="submit" id="signupBtn" class="w-full py-3 font-semibold rounded-xl shadow-lg transition btn-neon mt-6">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="flex items-center my-8 w-full">
+                <hr class="flex-grow border-gray-700">
+                <span class="mx-3 text-gray-500 text-sm">Or</span>
+                <hr class="flex-grow border-gray-700">
+            </div>
+
+            <!-- Google Signup -->
+            <button id="googleSignIn" type="button"
+                class="w-full flex items-center justify-center gap-3 py-3 rounded-xl shadow-sm text-gray-50 hover:border-neon hover:text-neon transition input-dark-transparent">
+                
+                <!-- Google Icon SVG (from login.html) -->
+                <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12.000,4.8c1.37,0,2.68,0.45,3.74,1.26l3.36-3.36C17.65,1.52,14.99,0,12.000,0C7.270,0,3.190,2.69,1.190,6.62L5.050,9.75C6.150,7.18,8.870,4.8,12.000,4.8z" fill="#EA4335"/>
+                    <path d="M1.19,6.62c-0.24,0.78-0.38,1.61-0.38,2.46c0,0.85,0.14,1.68,0.38,2.46l3.86,3.13C5.51,13.88,5.19,13,5.19,12.08C5.19,11.16,5.51,10.28,6.05,9.75L1.19,6.62z" fill="#FBBC04"/>
+                    <path d="M12.000,24c-2.91,0-5.55-0.97-7.40-2.67l3.86-3.13C9.07,19.98,10.46,20.4,12.000,20.4c3.27,0,6.01-1.68,7.57-4.14l3.77,2.95C20.81,22.1,16.64,24,12.000,24z" fill="#34A853"/>
+                    <path d="M22.5,12c0-0.78-0.08-1.54-0.21-2.28h-9.98v4.56h5.81c-0.3,1.56-1.28,2.87-2.73,3.75l3.77,2.95c2.19-2.02,3.47-4.99,3.47-8.98C23.63,14.99,23.6,12,22.5,12z" fill="#4285F4"/>
+                </svg>
+                <span class="font-medium">Sign up with Google</span>
+            </button>
+
+            <p class="text-gray-400 mt-8 text-sm">
+                Already have an account? 
+                <a href="/auth/login" class="text-neon hover:text-green-400 font-medium transition">Log in</a>
+            </p>
+        </section>
+</div>
+    
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.2.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.2.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.2.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBCwtCSeI7uayrH2qL8ptMAORO217MZNVk",
+  authDomain: "pastquestion-3b0cc.firebaseapp.com",
+  projectId: "pastquestion-3b0cc",
+  storageBucket: "pastquestion-3b0cc.appspot.com",
+  messagingSenderId: "625861976863",
+  appId: "1:625861976863:web:26d20e163bd6e06285862a",
+  measurementId: "G-JWH9LZ6WMC"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Helper function to generate session token
+function generateSessionToken() {
+    const array = new Uint8Array(32);
+    window.crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// Helper function to get device fingerprint
+function getDeviceFingerprint() {
+    const userAgent = navigator.userAgent;
+    const language = navigator.language;
+    const platform = navigator.platform;
+    
+    // Create a fingerprint from browser info
+    const fingerprintStr = `${userAgent}:${language}:${platform}:${screen.width}x${screen.height}`;
+    
+    // Simple hash function
+    let hash = 0;
+    for (let i = 0; i < fingerprintStr.length; i++) {
+        const char = fingerprintStr.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash).toString(16);
+}
+
+// Email/password signup
+document.getElementById("signupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("username").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const confirmPassword = document.getElementById("confirm_password").value.trim();
+  const isAdmin = document.getElementById("isAdmin").checked;
+  const adminCode = document.getElementById("adminCode").value.trim();
+  const verificationCode = document.getElementById("verificationCode").value.trim();
+  const errorMsg = document.getElementById("error-message");
+
+  if (password !== confirmPassword) {
+    errorMsg.classList.remove("hidden");
+    return;
+  } else {
+    errorMsg.classList.add("hidden");
+  }
+
+  // Check if user is admin
+  const ADMIN_SECRET = "PQ-ADMIN-2025"; // change this to your real code
+  let role = "user";
+  let requiresVerification = true;
+  
+  if (isAdmin) {
+    if (adminCode !== ADMIN_SECRET) {
+      alert("Invalid admin code!");
+      return;
+    } else {
+      role = "admin";
+      requiresVerification = false; // Admins don't need verification code
+    }
+  }
+
+  // For regular users, check verification code
+  if (requiresVerification) {
+    if (!verificationCode) {
+      alert("Please enter your verification code. You'll get this after paying 50 GHS.");
+      return;
+    }
+    
+    // Check if verification code exists and is unused
+    const codeRef = doc(db, "verificationCodes", verificationCode);
+    const codeDoc = await getDoc(codeRef);
+    
+    if (!codeDoc.exists()) {
+      alert("Invalid verification code. Please check and try again.");
+      return;
+    }
+    
+    const codeData = codeDoc.data();
+    if (codeData.used) {
+      alert("This verification code has already been used. Each code can only be used once.");
+      return;
+    }
+    
+    if (codeData.expiresAt && codeData.expiresAt.toDate() < new Date()) {
+      alert("This verification code has expired.");
+      return;
+    }
+  }
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    await sendEmailVerification(user);
+
+    alert(`Verification email sent to ${user.email}. Please verify before login.`);
+
+    // If regular user used a verification code, mark it as used
+    if (requiresVerification && verificationCode) {
+      const codeRef = doc(db, "verificationCodes", verificationCode);
+      await updateDoc(codeRef, {
+        used: true,
+        usedBy: user.uid,
+        usedAt: new Date(),
+        usedByEmail: user.email
+      });
+    }
+
+    // Generate session token for single device login
+    const sessionToken = generateSessionToken();
+    const deviceFingerprint = getDeviceFingerprint();
+    const now = new Date();
+
+    // Create user document with session management
+    await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
+      username: username,
+      role: role,
+      paid: role === "user" ? true : false, // Regular users are marked as paid after verification
+      verified: false,
+      createdAt: now,
+      
+      // Session management fields for single device login
+      active_session_id: sessionToken,
+      session_created: now,
+      device_fingerprint: deviceFingerprint,
+      login_count: 1,
+      last_login: now,
+      updated_at: now
+    });
+
+    // Store session info in localStorage for client-side tracking
+    localStorage.setItem('passquestion_user_session', JSON.stringify({
+      uid: user.uid,
+      email: user.email,
+      session_id: sessionToken,
+      device_fingerprint: deviceFingerprint,
+      created_at: now.toISOString()
+    }));
+
+    // Redirect to login page
+    window.location.href = "/auth/login";
+  } catch (error) {
+    alert("Error: " + error.message);
+  }
+});
+
+// Google signup/login
+const provider = new GoogleAuthProvider();
+document.getElementById("googleSignIn").addEventListener("click", async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    const userName = user.displayName || "New User";
+    
+    // Generate session token for single device login
+    const sessionToken = generateSessionToken();
+    const deviceFingerprint = getDeviceFingerprint();
+    const now = new Date();
+
+    await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
+      username: userName,
+      role: "user",
+      paid: false, // Google users need to verify with code
+      verified: false,
+      createdAt: now,
+      
+      // Session management fields for single device login
+      active_session_id: sessionToken,
+      session_created: now,
+      device_fingerprint: deviceFingerprint,
+      login_count: 1,
+      last_login: now,
+      updated_at: now
+    });
+
+    // Store session info in localStorage
+    localStorage.setItem('passquestion_user_session', JSON.stringify({
+      uid: user.uid,
+      email: user.email,
+      session_id: sessionToken,
+      device_fingerprint: deviceFingerprint,
+      created_at: now.toISOString()
+    }));
+
+    alert(`Welcome ${userName}. Please complete your account by entering a verification code.`);
+    window.location.href = "/auth/login";
+  } catch (error) {
+    alert("Google sign-in error: " + error.message);
+  }
+});
+
+// Show/hide admin code input and hide verification code for admins
+document.getElementById("isAdmin").addEventListener("change", function () {
+  const adminBox = document.getElementById("adminCodeContainer");
+  const verificationBox = document.getElementById("verificationCodeContainer");
+  
+  if (this.checked) {
+    adminBox.classList.remove("hidden");
+    verificationBox.classList.add("hidden");
+  } else {
+    adminBox.classList.add("hidden");
+    verificationBox.classList.remove("hidden");
+  }
+});
+
+// Password toggle
+function togglePassword(fieldId, iconId) {
+  const field = document.getElementById(fieldId);
+  const icon = document.getElementById(iconId);
+  if (field.type === "password") {
+    field.type = "text";
+    icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.5 12c0 1.272.243 2.483.686 3.597M12 4.5c3.3 0 6.3 1.697 8.02 4.223M21 12c0 1.25-.22 2.447-.624 3.558M9.88 9.88l4.24 4.24M9.88 14.12l4.24-4.24"/>`;
+  } else {
+    field.type = "password";
+    icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12 18 19.5 12 19.5 2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"/>`;
+  }
+}
+
+// Utility function to generate verification codes (run in console)
+window.generateVerificationCodes = async function(count = 10) {
+  const codes = [];
+  const prefix = "PQ";
+  
+  for (let i = 0; i < count; i++) {
+    // Generate a random 8-character alphanumeric code
+    const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const code = `${prefix}-${randomPart.substring(0, 4)}-${randomPart.substring(4, 8)}`;
+    
+    // Add expiration date (30 days from now)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+    
+    codes.push({
+      code: code,
+      expiresAt: expiresAt
+    });
+    
+    // Save to Firestore
+    await setDoc(doc(db, "verificationCodes", code), {
+      code: code,
+      used: false,
+      createdAt: new Date(),
+      expiresAt: expiresAt,
+      value: 50 // GHS value
+    });
+  }
+  
+  console.log("Generated Codes:", codes.map(c => c.code).join("\n"));
+  console.log("Codes saved to Firestore collection 'verificationCodes'");
+  return codes;
+};
+
+// Check verification code status (run in console)
+window.checkVerificationCode = async function(code) {
+  const codeRef = doc(db, "verificationCodes", code);
+  const codeDoc = await getDoc(codeRef);
+  
+  if (!codeDoc.exists()) {
+    console.log("Code does not exist");
+    return null;
+  }
+  
+  const data = codeDoc.data();
+  console.log("Code Status:", {
+    code: data.code,
+    used: data.used,
+    usedBy: data.usedBy || "Not used",
+    usedByEmail: data.usedByEmail || "Not used",
+    createdAt: data.createdAt?.toDate(),
+    expiresAt: data.expiresAt?.toDate(),
+    expired: data.expiresAt ? data.expiresAt.toDate() < new Date() : false
+  });
+  
+  return data;
+};
+
+// Initial console message
+console.log(`
+========================================
+VERIFICATION CODE MANAGEMENT
+========================================
+To generate verification codes, run in console:
+generateVerificationCodes(5) - Generate 5 codes
+
+To check a code's status:
+checkVerificationCode("PQ-ABCD-1234")
+
+Each code:
+- Is unique and one-time use
+- Valid for 30 days
+- Worth 50 GHS
+- Stored in Firestore 'verificationCodes' collection
+========================================
+`);
+
+</script>
+
+<!-- Session Management Script (for future logins) -->
+<script>
+// Function to check session on pages that require login
+function checkUserSession() {
+    const sessionData = localStorage.getItem('passquestion_user_session');
+    if (!sessionData) return null;
+    
+    try {
+        return JSON.parse(sessionData);
+    } catch (e) {
+        localStorage.removeItem('passquestion_user_session');
+        return null;
+    }
+}
+
+// Function to clear session (for logout)
+function clearUserSession() {
+    localStorage.removeItem('passquestion_user_session');
+}
+
+// Function to validate session with server
+async function validateSessionWithServer(sessionData) {
+    if (!sessionData || !sessionData.uid || !sessionData.session_id) {
+        return { valid: false, message: "No active session" };
+    }
+    
+    try {
+        const response = await fetch('/auth/api/session/check', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Session validation error:', error);
+        return { valid: false, message: "Network error" };
+    }
+}
+
+// Make functions available globally
+window.checkUserSession = checkUserSession;
+window.clearUserSession = clearUserSession;
+window.validateSessionWithServer = validateSessionWithServer;
+
+// Initialize session check if user is already logged in
+document.addEventListener('DOMContentLoaded', function() {
+    const sessionData = checkUserSession();
+    if (sessionData) {
+        console.log('User has existing session:', sessionData.email);
+        // You could optionally validate the session here
+    }
+});
+</script>
+</body>
+</html>

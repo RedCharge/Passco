@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Admin - PassQuestion{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+    body {
+      background: linear-gradient(135deg,#eef2ff,#ffffff);
+      color:#111;
+      overflow-x:hidden;
+      min-height:100vh;
+      position:relative;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top:1rem; left:50%;
+      transform:translateX(-50%);
+      width:90%;
+      max-width:1200px;
+      padding:0.9rem 2rem;
+      display:flex; justify-content:space-between; align-items:center;
+      background: rgba(255,255,255,0.3);
+      backdrop-filter: blur(20px);
+      border:1px solid rgba(255,255,255,0.4);
+      border-radius:2rem;
+      box-shadow:0 4px 20px rgba(0,0,0,0.05);
+      z-index:100;
+    }
+
+    nav .logo {
+      font-weight:700;
+      font-size:1.4rem;
+      color:#111;
+      letter-spacing:0.5px;
+    }
+
+    nav ul {
+      display:flex;
+      gap:2rem;
+      list-style:none;
+      align-items:center;
+    }
+
+    nav ul li a {
+      font-weight:500;
+      text-decoration:none;
+      color:#111;
+      transition:all 0.3s ease;
+      padding:0.5rem 0;
+    }
+
+    nav ul li a:hover {
+      color:#4f46e5;
+      transform:scale(1.05);
+    }
+
+    .menu-toggle {
+      display:none;
+      flex-direction:column;
+      gap:5px;
+      cursor:pointer;
+    }
+
+    .menu-toggle div {
+      width:30px;
+      height:3px;
+      background:#111;
+      border-radius:3px;
+      transition:all 0.3s ease;
+    }
+
+    /* Main */
+    main {
+      margin-top:120px;
+      padding:2rem;
+      max-width:1100px;
+      margin-left:auto;
+      margin-right:auto;
+      position:relative;
+      z-index:1;
+      background: rgba(255,255,255,0.6);
+      border-radius:1.5rem;
+      backdrop-filter:blur(20px);
+      box-shadow:0 8px 40px rgba(0,0,0,0.06);
+      transition: all 0.3s ease;
+    }
+
+    main:hover {
+      box-shadow:0 10px 50px rgba(0,0,0,0.08);
+    }
+
+    /* Floating visuals */
+    .circle {
+      position:absolute;
+      border-radius:50%;
+      background: rgba(79,70,229,0.08);
+      animation:float 6s ease-in-out infinite;
+      z-index:0;
+      filter:blur(50px);
+    }
+    .c1 { width:220px; height:220px; top:10%; left:5%; }
+    .c2 { width:180px; height:180px; bottom:10%; right:10%; }
+    .c3 { width:120px; height:120px; top:40%; right:20%; }
+
+    @keyframes float {
+      0%,100% { transform:translateY(0);}
+      50% { transform:translateY(-20px);}
+    }
+
+    /* Footer */
+    footer {
+      margin-top:3rem;
+      padding:2rem;
+      text-align:center;
+      color:#333;
+      font-size:0.9rem;
+    }
+
+    /* Mobile */
+    @media(max-width:768px){
+      nav { padding:0.8rem 1.5rem; }
+      nav ul {
+        display:none;
+        position:fixed;
+        top:90px;
+        right:1rem;
+        flex-direction:column;
+        background:rgba(255,255,255,0.9);
+        backdrop-filter:blur(10px);
+        padding:1.5rem;
+        border-radius:1rem;
+        gap:1.2rem;
+        border:1px solid rgba(255,255,255,0.3);
+      }
+      nav ul.active{ display:flex; }
+      .menu-toggle{ display:flex; }
+      main{ padding:1.5rem; margin-top:100px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav>
+    <div class="logo">PassQuestion Admin</div>
+    <ul>
+      <li><a href="{{ url_for('auth.admin_dashboard') }}">Dashboard</a></li>
+      <li><a href="#">Uploads</a></li>
+      <li><a href="#">Users</a></li>
+      <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+    </ul>
+    <div class="menu-toggle">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+  </nav>
+
+  <!-- Soft floating shapes -->
+  <div class="circle c1"></div>
+  <div class="circle c2"></div>
+  <div class="circle c3"></div>
+
+  <!-- Main content -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    &copy; 2025 PassQuestion. Clean, simple, and human.
+  </footer>
+
+  <script>
+    const menuToggle = document.querySelector('.menu-toggle');
+    const navUl = document.querySelector('nav ul');
+    menuToggle.addEventListener('click',()=>navUl.classList.toggle('active'));
+  </script>
+</body>
+</html>

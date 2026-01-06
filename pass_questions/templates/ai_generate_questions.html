@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Question Generator - Passco Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'accent-green': '#4ade80',
+                        'dark-bg': '#0f172a',
+                        'dark-card': '#1e293b',
+                        'dark-border': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #172554 100%); }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .input-style {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid #334155;
+            color: #e2e8f0;
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-gray-200 min-h-screen">
+    <!-- Navigation -->
+    <div class="p-4 border-b border-dark-border">
+        <div class="flex items-center justify-between">
+            <a href="{{ url_for('admin.dashboard') }}" class="text-accent-green font-bold text-xl">← Back to Dashboard</a>
+            <span class="text-2xl font-extrabold text-accent-green">PASSCO AI</span>
+        </div>
+    </div>
+
+    <main class="container mx-auto p-4 md:p-8">
+        <h1 class="text-4xl font-extrabold mb-2 text-white">AI Question Generator</h1>
+        <p class="text-gray-400 mb-8">Upload a PDF and let AI generate quiz questions automatically!</p>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6">
+                    {% for category, message in messages %}
+                        <div class="p-4 mb-4 rounded-xl text-sm font-semibold flex items-center justify-between 
+                            {% if category == 'success' %}bg-green-800/50 text-green-300 border border-green-700/50
+                            {% elif category == 'error' %}bg-red-800/50 text-red-300 border border-red-700/50
+                            {% else %}bg-blue-800/50 text-blue-300 border border-blue-700/50{% endif %}">
+                            <span>{{ message }}</span>
+                            <button onclick="this.parentElement.remove()" class="text-white/50 hover:text-white">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Message Box -->
+        <div id="messageBox" class="mb-6"></div>
+
+        <!-- Main Form -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Upload Form -->
+            <div class="lg:col-span-2">
+                <div class="glass-card p-8 rounded-2xl">
+                    <h2 class="text-2xl font-semibold mb-6 text-accent-green border-b border-dark-border/50 pb-3">
+                        <span class="flex items-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            Upload PDF & Configure
+                        </span>
+                    </h2>
+
+                    <form id="aiGenerateForm" enctype="multipart/form-data">
+                        <!-- PDF Upload -->
+                        <div class="mb-8">
+                            <label class="block text-lg font-medium mb-4 text-gray-300">PDF File</label>
+                            <div class="border-2 border-dashed border-dark-border rounded-xl p-8 text-center hover:border-accent-green/50 transition duration-300">
+                                <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" required
+                                    class="hidden" onchange="updateFileName()">
+                                <div class="space-y-4">
+                                    <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    <div>
+                                        <button type="button" onclick="document.getElementById('pdf_file').click()"
+                                            class="px-6 py-3 bg-accent-green text-dark-bg font-bold rounded-lg hover:bg-green-500 transition duration-300">
+                                            Choose PDF File
+                                        </button>
+                                        <p class="text-sm text-gray-400 mt-2" id="fileName">No file chosen</p>
+                                        <p class="text-xs text-gray-500 mt-1">Upload lecture notes, textbooks, or study materials</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Course Info -->
+                        <div class="mb-8">
+                            <h3 class="text-lg font-medium mb-4 text-gray-300 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                                Course Information
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-300">Program</label>
+                                    <input type="text" name="program" value="Computer Science"
+                                        class="w-full p-3 rounded-lg input-style">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-300">Course</label>
+                                    <input type="text" name="course" value="Introduction to Programming"
+                                        class="w-full p-3 rounded-lg input-style">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-300">Level</label>
+                                    <select name="level" class="w-full p-3 rounded-lg input-style">
+                                        <option value="100">100</option>
+                                        <option value="200">200</option>
+                                        <option value="300">300</option>
+                                        <option value="400">400</option>
+                                        <option value="500">500</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-300">Semester</label>
+                                    <select name="semester" class="w-full p-3 rounded-lg input-style">
+                                        <option value="First">First</option>
+                                        <option value="Second">Second</option>
+                                        <option value="Summer">Summer</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Generation Settings -->
+                        <div class="mb-8">
+                            <h3 class="text-lg font-medium mb-4 text-gray-300 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                AI Settings
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-300">Number of Questions</label>
+                                    <input type="number" name="num_questions" min="1" max="50" value="10"
+                                        class="w-full p-3 rounded-lg input-style">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-gray-300">Difficulty</label>
+                                    <select name="difficulty" class="w-full p-3 rounded-lg input-style">
+                                        <option value="easy">Easy</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="hard">Hard</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="mt-8">
+                            <button type="submit" id="generateBtn"
+                                class="w-full py-4 px-6 rounded-xl font-bold bg-gradient-to-r from-accent-green to-green-600 text-dark-bg hover:opacity-90 transition duration-300 text-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Generate Questions with AI
+                            </button>
+                            <p class="text-xs text-gray-500 text-center mt-3">
+                                Uses DeepSeek AI to analyze your PDF and create relevant quiz questions
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column: Instructions & Preview -->
+            <div class="space-y-8">
+                <!-- Instructions -->
+                <div class="glass-card p-6 rounded-2xl">
+                    <h3 class="text-xl font-semibold mb-4 text-accent-green">📚 How It Works</h3>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <span class="text-accent-green mr-2">1.</span>
+                            <span>Upload lecture notes or textbook PDF</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-accent-green mr-2">2.</span>
+                            <span>AI extracts key concepts and topics</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-accent-green mr-2">3.</span>
+                            <span>Generates multiple-choice questions</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-accent-green mr-2">4.</span>
+                            <span>Questions are saved to database automatically</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-accent-green mr-2">5.</span>
+                            <span>Students can take quizzes instantly</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Tips -->
+                <div class="glass-card p-6 rounded-2xl">
+                    <h3 class="text-xl font-semibold mb-4 text-accent-green">💡 Tips for Best Results</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 text-accent-green mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Use text-based PDFs (not scanned images)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 text-accent-green mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Upload complete chapters for better context</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 text-accent-green mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Start with 10 questions to test quality</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 text-accent-green mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Review and edit generated questions if needed</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Preview Area -->
+                <div class="glass-card p-6 rounded-2xl">
+                    <h3 class="text-xl font-semibold mb-4 text-accent-green">👁️ Preview</h3>
+                    <div id="previewArea" class="text-sm text-gray-400 italic">
+                        Generated questions will appear here...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section (hidden by default) -->
+        <div id="resultsSection" class="hidden mt-8">
+            <div class="glass-card p-8 rounded-2xl">
+                <h2 class="text-2xl font-semibold mb-6 text-accent-green">✨ Generated Questions</h2>
+                <div id="generatedQuestions" class="space-y-6 max-h-[500px] overflow-y-auto pr-4"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Update file name display
+        function updateFileName() {
+            const fileInput = document.getElementById('pdf_file');
+            const fileNameDisplay = document.getElementById('fileName');
+            
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+                fileNameDisplay.className = "text-sm text-accent-green mt-2";
+            } else {
+                fileNameDisplay.textContent = "No file chosen";
+                fileNameDisplay.className = "text-sm text-gray-400 mt-2";
+            }
+        }
+
+        // Show message
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageBox');
+            const colors = {
+                success: 'bg-green-800/50 text-green-300 border-green-700/50',
+                error: 'bg-red-800/50 text-red-300 border-red-700/50',
+                info: 'bg-blue-800/50 text-blue-300 border-blue-700/50',
+                warning: 'bg-yellow-800/50 text-yellow-300 border-yellow-700/50'
+            };
+
+            container.innerHTML = `
+                <div class="p-4 rounded-xl text-sm font-semibold flex items-center justify-between border ${colors[type]}">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.remove()" class="text-white/50 hover:text-white">&times;</button>
+                </div>
+            `;
+        }
+
+        // Render generated questions
+        function renderQuestions(questions) {
+            const container = document.getElementById('generatedQuestions');
+            const preview = document.getElementById('previewArea');
+            
+            if (!questions || questions.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 italic">No questions generated</p>';
+                preview.innerHTML = '<p class="text-gray-400 italic">No questions to preview</p>';
+                return;
+            }
+            
+            let html = '';
+            let previewHtml = '';
+            
+            questions.forEach((q, index) => {
+                const letters = ['A', 'B', 'C', 'D'];
+                
+                html += `
+                    <div class="p-4 bg-dark-card/30 rounded-xl border border-dark-border">
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="font-semibold text-accent-green">Q${index + 1}: ${q.question}</h4>
+                            <span class="text-xs px-2 py-1 rounded-full ${q.difficulty === 'easy' ? 'bg-green-800/50 text-green-300' : q.difficulty === 'hard' ? 'bg-red-800/50 text-red-300' : 'bg-yellow-800/50 text-yellow-300'}">
+                                ${q.difficulty}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                            ${q.options.map((opt, i) => `
+                                <div class="p-2 rounded ${i === q.correctAnswer ? 'bg-green-800/30 border border-green-700/50' : 'bg-dark-card/50'}">
+                                    <span class="font-medium ${i === q.correctAnswer ? 'text-green-300' : 'text-gray-300'}">${letters[i]}. </span>
+                                    <span class="${i === q.correctAnswer ? 'text-green-300' : 'text-gray-300'}">${opt}</span>
+                                    ${i === q.correctAnswer ? '<span class="text-xs text-green-400 ml-2">✓ Correct</span>' : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${q.explanation ? `<p class="text-xs text-gray-400 italic mt-2">💡 ${q.explanation}</p>` : ''}
+                    </div>
+                `;
+                
+                // Preview first 3 questions
+                if (index < 3) {
+                    previewHtml += `<p class="mb-2"><strong>Q${index + 1}:</strong> ${q.question.substring(0, 80)}...</p>`;
+                }
+            });
+            
+            container.innerHTML = html;
+            preview.innerHTML = previewHtml || '<p class="text-gray-400 italic">Preview will appear here</p>';
+            
+            // Show results section
+            document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        // Handle form submission
+        document.getElementById('aiGenerateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const generateBtn = document.getElementById('generateBtn');
+            const originalText = generateBtn.innerHTML;
+            
+            // Show loading state
+            generateBtn.innerHTML = `
+                <span class="flex items-center justify-center">
+                    <svg class="animate-spin h-6 w-6 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating with AI...
+                </span>
+            `;
+            generateBtn.disabled = true;
+            
+            showMessage('Generating questions with AI. This may take a moment...', 'info');
+            
+            try {
+                const response = await fetch('/admin/api/generate-questions', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`✅ Successfully generated ${result.saved_count} questions! ${result.failed_count > 0 ? `(${result.failed_count} failed)` : ''}`, 'success');
+                    renderQuestions(result.questions);
+                    
+                    // Scroll to results
+                    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+                    
+                } else {
+                    showMessage(`❌ Error: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Generation error:', error);
+                showMessage(`❌ Network error: ${error.message}`, 'error');
+                
+            } finally {
+                // Restore button
+                generateBtn.innerHTML = originalText;
+                generateBtn.disabled = false;
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('AI Question Generator loaded');
+        });
+    </script>
+</body>
+</html>

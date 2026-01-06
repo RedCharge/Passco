@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Codes - Passco Admin</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Configure Tailwind for your dashboard theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'accent-green': '#4ade80',      // Primary Accent Green
+                        'dark-bg': '#0f172a',           // Deep Slate Gray (Primary Background)
+                        'dark-card': '#1e293b',         // Darker Slate Gray (Used for deep elements like sidebar)
+                        'dark-border': '#334155',       // Border color (Slate 700)
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'neon-glow': '0 0 8px rgba(74, 222, 128, 0.6)', // For buttons
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)', // Glass effect shadow
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles matching your dashboard */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: linear-gradient(135deg, #0f172a 0%, #172554 100%);
+        }
+        
+        /* Glass Card Style */
+        .glass-card {
+            background-color: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: theme('colors.accent-green');
+            box-shadow: 0 10px 40px 0 rgba(74, 222, 128, 0.15);
+        }
+        
+        /* Input Field Style */
+        .input-style {
+            background-color: rgba(15, 23, 42, 0.7);
+            border: 1px solid theme('colors.dark-border');
+            color: theme('colors.gray.200');
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-style:focus {
+            border-color: theme('colors.accent-green');
+            box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+        }
+
+        /* Status badges */
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-unused {
+            background-color: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+        .status-used {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .status-expired {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* Sidebar Style */
+        .sidebar {
+            background-color: #1e293b;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Mobile Header Style */
+        .mobile-header {
+            background-color: #1e293b;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid theme('colors.accent-green');
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Pagination buttons */
+        .pagination-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(74, 222, 128, 0.1);
+            border-color: theme('colors.accent-green');
+        }
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-gray-200 min-h-screen">
+
+    <!-- 1. MOBILE HEADER (Visible on small screens, hidden on large screens) -->
+    <header class="mobile-header lg:hidden sticky top-0 z-10 p-4 border-b border-dark-border">
+        <div class="flex justify-between items-center mb-4">
+             <span class="text-2xl font-extrabold tracking-wider text-accent-green">PASSCO</span>
+             <button id="menuToggle" class="text-white hover:text-accent-green">
+                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+             </button>
+        </div>
+
+        <!-- Mobile Navigation Menu -->
+        <nav id="mobileNav" class="flex-col space-y-2 hidden">
+            <a href="{{ url_for('admin.dashboard') }}" class="flex items-center p-2 rounded-lg transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-10v10a1 1 0 001 1h3m-10 0v-2a1 1 0 011-1h2a1 1 0 011 1v2m-6 0h6"></path></svg>
+                <span class="text-sm font-medium">Dashboard</span>
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="flex items-center p-2 rounded-lg transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                <svg class="w-6 h-6 text-gray-400 group-hover:text-accent-green mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M7.5 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm10 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-4.999 0h.002"></path></svg>
+                <span class="text-sm font-medium">Members</span>
+            </a>
+            <a href="{{ url_for('admin.verification_codes') }}" class="flex items-center p-2 rounded-lg bg-accent-green/20 border border-accent-green/50 text-accent-green transition duration-200 group">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                <span class="text-sm font-medium">Verification Codes</span>
+            </a>
+            <a href="{{ url_for('admin.logout') }}" class="w-full text-left flex items-center p-2 rounded-lg text-red-400 hover:bg-red-900/30 transition duration-200 mt-4 border-t border-dark-border/50">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                <span class="text-sm font-medium">Logout</span>
+            </a>
+        </nav>
+    </header>
+
+    <!-- Main Dashboard Container -->
+    <div class="flex min-h-screen">
+        <!-- 2. DESKTOP SIDEBAR -->
+        <aside class="hidden lg:flex w-64 flex-col border-r border-dark-border sidebar p-4">
+            <div class="flex items-center justify-start mb-10 h-16">
+                <span class="text-3xl font-extrabold tracking-wider text-accent-green">PASSCO</span>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 space-y-2">
+                <a href="{{ url_for('admin.dashboard') }}" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-10v10a1 1 0 001 1h3m-10 0v-2a1 1 0 011-1h2a1 1 0 011 1v2m-6 0h6"></path></svg>
+                    <span class="text-sm font-medium">Dashboard</span>
+                </a>
+                <a href="{{ url_for('admin.users') }}" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 text-gray-400 group-hover:text-accent-green mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M7.5 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm10 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-4.999 0h.002"></path></svg>
+                    <span class="text-sm font-medium">Members</span>
+                </a>
+                <a href="{{ url_for('admin.verification_codes') }}" class="flex items-center p-3 rounded-xl bg-accent-green/20 border border-accent-green/50 text-accent-green transition duration-200 group">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    <span class="text-sm font-medium">Verification Codes</span>
+                </a>
+                <a href="/admin/upload-questions" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 text-gray-400 group-hover:text-accent-green mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M7.5 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm10 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-4.999 0h.002"></path></svg>
+                    <span class="text-sm font-medium">Questions</span>
+                </a>
+            </nav>
+            
+            <!-- Logout Button -->
+            <div class="mt-8 pt-4 border-t border-dark-border">
+                 <a href="{{ url_for('admin.logout') }}" class="w-full text-left flex items-center p-3 rounded-xl text-red-400 hover:bg-red-900/30 transition duration-200">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span class="text-sm font-medium">Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- 3. MAIN CONTENT AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-8">
+            <h1 class="text-4xl font-extrabold mb-2 text-white tracking-tight">Verification Code Management</h1>
+            <p class="text-gray-400 mb-8">Generate and manage verification codes for user registration. Each code can only be used once.</p>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6">
+                        {% for category, message in messages %}
+                            <div class="p-4 mb-4 rounded-xl text-sm font-semibold flex items-center justify-between 
+                                {% if category == 'success' %}bg-green-800/50 text-green-300 border border-green-700/50
+                                {% elif category == 'error' %}bg-red-800/50 text-red-300 border border-red-700/50
+                                {% elif category == 'warning' %}bg-yellow-800/50 text-yellow-300 border border-yellow-700/50
+                                {% else %}bg-blue-800/50 text-blue-300 border border-blue-700/50{% endif %}">
+                                <span>{{ message }}</span>
+                                <button onclick="this.parentElement.remove()" class="text-white/50 hover:text-white">&times;</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Total Codes Card -->
+                <div class="p-6 rounded-2xl glass-card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-gray-300 font-medium text-sm">Total Codes</p>
+                        <svg class="w-7 h-7 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    </div>
+                    <p id="totalCodes" class="text-4xl font-extrabold text-white mt-4">0</p>
+                    <p class="text-xs text-gray-400 mt-2">All verification codes</p>
+                </div>
+                
+                <!-- Unused Codes Card -->
+                <div class="p-6 rounded-2xl glass-card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-gray-300 font-medium text-sm">Unused Codes</p>
+                        <svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <p id="unusedCodes" class="text-4xl font-extrabold text-white mt-4">0</p>
+                    <p class="text-xs text-green-400 mt-2">Available for registration</p>
+                </div>
+                
+                <!-- Used Codes Card -->
+                <div class="p-6 rounded-2xl glass-card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-gray-300 font-medium text-sm">Used Codes</p>
+                        <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M7.5 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm10 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-4.999 0h.002"></path></svg>
+                    </div>
+                    <p id="usedCodes" class="text-4xl font-extrabold text-white mt-4">0</p>
+                    <p class="text-xs text-yellow-600 mt-2">Already registered users</p>
+                </div>
+                
+                <!-- Expired Codes Card -->
+                <div class="p-6 rounded-2xl glass-card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-gray-300 font-medium text-sm">Expired Codes</p>
+                        <svg class="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <p id="expiredCodes" class="text-4xl font-extrabold text-white mt-4">0</p>
+                    <p class="text-xs text-red-400 mt-2">Past expiration date</p>
+                </div>
+            </div>
+
+            <!-- Code Generation Section -->
+            <div class="p-8 rounded-2xl glass-card mb-8">
+                <h3 class="text-2xl font-semibold mb-6 text-accent-green border-b border-dark-border/50 pb-3">Generate New Codes</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">Number of Codes</label>
+                        <input type="number" id="codeCount" min="1" max="100" value="10" 
+                            class="w-full p-3 rounded-lg input-style">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">Value (GHS)</label>
+                        <input type="number" id="codeValue" min="1" value="50" 
+                            class="w-full p-3 rounded-lg input-style">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">Expiry Days</label>
+                        <input type="number" id="expiryDays" min="1" max="365" value="30" 
+                            class="w-full p-3 rounded-lg input-style">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">Prefix</label>
+                        <input type="text" id="codePrefix" maxlength="6" value="PQ" 
+                            class="w-full p-3 rounded-lg input-style">
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap gap-4">
+                    <button onclick="generateCodes()" class="py-3 px-6 rounded-xl font-bold bg-accent-green text-dark-bg hover:bg-green-500 shadow-neon-glow transition duration-300">
+                        <i class="fas fa-plus mr-2"></i>Generate Codes
+                    </button>
+                    
+                    <button onclick="exportCodes()" class="py-3 px-6 rounded-xl font-bold bg-blue-900/50 text-blue-300 hover:bg-blue-800/70 transition duration-300 border border-blue-700/50">
+                        <i class="fas fa-download mr-2"></i>Export All Codes
+                    </button>
+                    
+                    <button onclick="toggleBulkImport()" class="py-3 px-6 rounded-xl font-bold bg-purple-900/50 text-purple-300 hover:bg-purple-800/70 transition duration-300 border border-purple-700/50">
+                        <i class="fas fa-file-import mr-2"></i>Bulk Import
+                    </button>
+                </div>
+                
+                <!-- Generated Codes Display -->
+                <div id="generatedCodesSection" class="mt-6 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-accent-green">Newly Generated Codes</h3>
+                        <button onclick="copyGeneratedCodes()" class="py-2 px-4 rounded-lg bg-dark-card/50 hover:bg-dark-card/70 transition duration-200 border border-dark-border">
+                            <i class="fas fa-copy mr-2"></i>Copy All
+                        </button>
+                    </div>
+                    <div id="generatedCodesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto p-3 bg-dark-card/30 rounded-lg border border-dark-border/50"></div>
+                </div>
+                
+                <!-- Bulk Import Section -->
+                <div id="bulkImportSection" class="mt-6 hidden">
+                    <h3 class="text-xl font-semibold text-accent-green mb-4">Bulk Import Codes</h3>
+                    <div class="mb-4">
+                        <textarea id="bulkCodesInput" rows="4" placeholder="Paste codes here, one per line. Optional format: CODE,EXPIRY_DAYS,VALUE&#10;Example:&#10;PQ-ABCD-1234,30,50&#10;PQ-WXYZ-5678,60,100"
+                            class="w-full p-3 rounded-lg input-style"></textarea>
+                        <p class="text-xs text-gray-400 mt-2">Each code will be imported as unused with the specified expiry days and value.</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="importBulkCodes()" class="py-3 px-6 rounded-xl font-bold bg-purple-900/50 text-purple-300 hover:bg-purple-800/70 transition duration-300 border border-purple-700/50">
+                            <i class="fas fa-upload mr-2"></i>Import Codes
+                        </button>
+                        <button onclick="toggleBulkImport()" class="py-3 px-6 rounded-xl bg-dark-card/50 hover:bg-dark-card/70 transition duration-200 border border-dark-border">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Management Section -->
+            <div class="p-8 rounded-2xl glass-card">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h2 class="text-2xl font-semibold text-accent-green">Code Management</h2>
+                    
+                    <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                        <div class="relative flex-1 md:w-64">
+                            <input type="text" id="searchCode" placeholder="Search codes or emails..." 
+                                class="w-full p-3 pl-10 rounded-lg input-style">
+                            <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                        </div>
+                        
+                        <select id="filterStatus" class="p-3 rounded-lg input-style">
+                            <option value="all">All Status</option>
+                            <option value="unused">Unused Only</option>
+                            <option value="used">Used Only</option>
+                            <option value="expired">Expired Only</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div id="loadingSection" class="text-center py-12">
+                    <div class="loader mx-auto"></div>
+                    <p class="mt-4 text-gray-400">Loading verification codes...</p>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="emptySection" class="text-center py-12 hidden">
+                    <div class="text-4xl text-gray-600 mb-4">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-300 mb-2">No verification codes found</h3>
+                    <p class="text-gray-500 mb-4">Generate some codes to get started!</p>
+                    <button onclick="generateCodes()" class="py-3 px-6 rounded-xl font-bold bg-accent-green text-dark-bg hover:bg-green-500 shadow-neon-glow transition duration-300">
+                        <i class="fas fa-plus mr-2"></i>Generate Your First Codes
+                    </button>
+                </div>
+                
+                <!-- Codes Table -->
+                <div id="codesTableSection" class="hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-dark-border/50 rounded-xl overflow-hidden">
+                            <thead class="bg-dark-card/50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Verification Code</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Value</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Created</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Expires</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Used By</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="codesTableBody" class="divide-y divide-dark-border/50">
+                                <!-- Codes will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Mobile View (Cards) -->
+                    <div id="mobileCodesView" class="lg:hidden mt-6 space-y-4">
+                        <!-- Mobile cards will be loaded here -->
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="flex flex-col md:flex-row justify-between items-center mt-6 pt-6 border-t border-dark-border gap-4">
+                        <div class="text-gray-400 text-sm">
+                            Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> codes
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="prevPage" onclick="changePage(-1)" class="pagination-btn" disabled>
+                                <i class="fas fa-chevron-left mr-2"></i>Previous
+                            </button>
+                            <span class="px-4 py-2 text-gray-300">Page <span id="currentPage">1</span></span>
+                            <button id="nextPage" onclick="changePage(1)" class="pagination-btn" disabled>
+                                Next<i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="mt-12 text-center text-xs text-gray-600 border-t border-dark-border/50 pt-4">
+                Passco Admin Panel | Verification Code Management | &copy; 2025
+            </footer>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <div class="glass-card p-4 min-w-64 max-w-md">
+            <div class="flex items-start">
+                <div id="toastIcon" class="mr-3 mt-0.5 text-xl"></div>
+                <div class="flex-1">
+                    <p id="toastMessage" class="text-white"></p>
+                </div>
+                <button onclick="hideToast()" class="ml-4 text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mark as Used Modal -->
+    <div id="markUsedModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-semibold text-accent-green mb-4">Mark Code as Used</h3>
+            <div class="mb-4">
+                <label class="block text-gray-300 mb-2">User Email</label>
+                <input type="email" id="usedByEmail" placeholder="Enter user's email" 
+                    class="w-full p-3 rounded-lg input-style">
+            </div>
+            <div class="flex justify-end gap-4">
+                <button onclick="closeMarkUsedModal()" class="py-2 px-4 rounded-lg bg-dark-card/50 hover:bg-dark-card/70 transition duration-200 border border-dark-border">
+                    Cancel
+                </button>
+                <button onclick="confirmMarkAsUsed()" class="py-2 px-4 rounded-lg font-bold bg-green-900/50 text-green-300 hover:bg-green-800/70 transition duration-300 border border-green-700/50">
+                    <i class="fas fa-check mr-2"></i>Mark as Used
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-semibold text-accent-green mb-4">Delete Code</h3>
+            <p class="text-gray-300 mb-6">Are you sure you want to delete this code? This action cannot be undone.</p>
+            <div class="flex justify-end gap-4">
+                <button onclick="closeDeleteModal()" class="py-2 px-4 rounded-lg bg-dark-card/50 hover:bg-dark-card/70 transition duration-200 border border-dark-border">
+                    Cancel
+                </button>
+                <button onclick="confirmDeleteCode()" class="py-2 px-4 rounded-lg font-bold bg-red-900/50 text-red-300 hover:bg-red-800/70 transition duration-300 border border-red-700/50">
+                    <i class="fas fa-trash mr-2"></i>Delete Code
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let currentPage = 1;
+        const perPage = 10;
+        let totalPages = 1;
+        let currentCodeId = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile menu toggle
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileNav = document.getElementById('mobileNav');
+            if (menuToggle && mobileNav) {
+                menuToggle.addEventListener('click', () => {
+                    mobileNav.classList.toggle('hidden');
+                });
+            }
+            
+            loadStats();
+            loadCodes();
+            
+            // Event listeners
+            document.getElementById('searchCode').addEventListener('input', debounce(function() {
+                currentPage = 1;
+                loadCodes();
+            }, 300));
+            
+            document.getElementById('filterStatus').addEventListener('change', function() {
+                currentPage = 1;
+                loadCodes();
+            });
+            
+            // Press Enter in email field
+            document.getElementById('usedByEmail').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') confirmMarkAsUsed();
+            });
+        });
+        
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            const icons = {
+                success: { icon: '✅', color: 'text-green-400' },
+                error: { icon: '❌', color: 'text-red-400' },
+                warning: { icon: '⚠️', color: 'text-yellow-400' },
+                info: { icon: 'ℹ️', color: 'text-blue-400' }
+            };
+            
+            const toastType = icons[type] || icons.info;
+            toastIcon.innerHTML = toastType.icon;
+            toastIcon.className = toastType.color;
+            toastMessage.textContent = message;
+            
+            toast.classList.remove('hidden');
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            
+            setTimeout(() => {
+                hideToast();
+            }, 3000);
+        }
+        
+        function hideToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('opacity-0');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 300);
+        }
+        
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/admin/api/verification-codes/stats');
+                if (!response.ok) throw new Error('Failed to load stats');
+                
+                const data = await response.json();
+                
+                document.getElementById('totalCodes').textContent = data.total || 0;
+                document.getElementById('unusedCodes').textContent = data.unused || 0;
+                document.getElementById('usedCodes').textContent = data.used || 0;
+                document.getElementById('expiredCodes').textContent = data.expired || 0;
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        // Load verification codes
+        async function loadCodes() {
+            const loading = document.getElementById('loadingSection');
+            const empty = document.getElementById('emptySection');
+            const tableSection = document.getElementById('codesTableSection');
+            const tableBody = document.getElementById('codesTableBody');
+            const mobileView = document.getElementById('mobileCodesView');
+            
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            tableSection.classList.add('hidden');
+            tableBody.innerHTML = '';
+            if (mobileView) mobileView.innerHTML = '';
+            
+            try {
+                const search = document.getElementById('searchCode').value;
+                const status = document.getElementById('filterStatus').value;
+                
+                const url = `/admin/api/verification-codes?status=${status}&search=${encodeURIComponent(search)}&page=${currentPage}&per_page=${perPage}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) throw new Error('Failed to load codes');
+                
+                const data = await response.json();
+                
+                loading.classList.add('hidden');
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+                
+                // Update pagination info
+                totalPages = data.total_pages || 1;
+                document.getElementById('showingCount').textContent = 
+                    data.codes.length > 0 ? 
+                    `${Math.min((currentPage - 1) * perPage + 1, data.total)}-${Math.min(currentPage * perPage, data.total)}` : 
+                    '0';
+                document.getElementById('totalCount').textContent = data.total || 0;
+                document.getElementById('currentPage').textContent = currentPage;
+                
+                // Update pagination buttons
+                document.getElementById('prevPage').disabled = currentPage === 1;
+                document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+                
+                if (data.codes.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                
+                // Render codes table
+                tableSection.classList.remove('hidden');
+                tableBody.innerHTML = '';
+                if (mobileView) mobileView.innerHTML = '';
+                
+                data.codes.forEach(code => {
+                    const createdDate = code.createdAt ? new Date(code.createdAt).toLocaleDateString() : 'N/A';
+                    const expiresDate = code.expiresAt ? new Date(code.expiresAt).toLocaleDateString() : 'N/A';
+                    const usedAtDate = code.usedAt ? new Date(code.usedAt).toLocaleDateString() : '';
+                    
+                    // Desktop table row
+                    const row = document.createElement('tr');
+                    row.className = 'bg-dark-card/20 hover:bg-dark-card/50 transition duration-150';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="font-mono font-medium text-accent-green">${code.code}</div>
+                            ${code.prefix ? `<div class="text-xs text-gray-500 mt-1">Prefix: ${code.prefix}</div>` : ''}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="status-badge status-${code.status}">${code.status.toUpperCase()}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                            ${code.value || 50} GHS
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                            ${createdDate}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm ${code.expired && !code.used ? 'text-yellow-400' : 'text-gray-300'}">
+                            ${expiresDate}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm ${code.usedByEmail ? 'text-white' : 'text-gray-400'}">${code.usedByEmail || '—'}</div>
+                            <div class="text-xs text-gray-500">${usedAtDate}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex gap-2">
+                                ${!code.used ? `
+                                <button onclick="openMarkUsedModal('${code.id}')" class="text-sm text-green-400 hover:text-green-300 transition duration-150">
+                                    Mark Used
+                                </button>
+                                ` : `
+                                <button onclick="markAsUnused('${code.id}')" class="text-sm text-gray-400 hover:text-gray-300 transition duration-150">
+                                    Mark Unused
+                                </button>
+                                `}
+                                <button onclick="openDeleteModal('${code.id}')" class="text-sm text-red-400 hover:text-red-300 transition duration-150 ml-4">
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                    
+                    // Mobile card view
+                    if (mobileView) {
+                        const mobileCard = document.createElement('div');
+                        mobileCard.className = 'p-4 bg-dark-card/70 rounded-xl border border-dark-border/50';
+                        mobileCard.innerHTML = `
+                            <p class="font-mono font-semibold text-accent-green truncate">${code.code}</p>
+                            <div class="mt-3 space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="status-badge status-${code.status}">${code.status.toUpperCase()}</span>
+                                    <span class="text-sm font-medium text-white">${code.value || 50} GHS</span>
+                                </div>
+                                <div class="text-xs text-gray-400 space-y-1">
+                                    <p><strong>Created:</strong> ${createdDate}</p>
+                                    <p class="${code.expired && !code.used ? 'text-yellow-400' : ''}"><strong>Expires:</strong> ${expiresDate}</p>
+                                    ${code.usedByEmail ? `<p><strong>Used by:</strong> ${code.usedByEmail}</p>` : ''}
+                                    ${usedAtDate ? `<p><strong>Used at:</strong> ${usedAtDate}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="mt-4 flex gap-2">
+                                ${!code.used ? `
+                                <button onclick="openMarkUsedModal('${code.id}')" class="flex-1 py-2 text-sm rounded-lg text-green-400 border border-green-900/50 bg-green-900/10 hover:bg-green-900/30 transition duration-150">
+                                    Mark Used
+                                </button>
+                                ` : `
+                                <button onclick="markAsUnused('${code.id}')" class="flex-1 py-2 text-sm rounded-lg text-gray-400 border border-gray-700/50 bg-gray-800/20 hover:bg-gray-700/40 transition duration-150">
+                                    Mark Unused
+                                </button>
+                                `}
+                                <button onclick="openDeleteModal('${code.id}')" class="flex-1 py-2 text-sm rounded-lg text-red-400 border border-red-900/50 bg-red-900/10 hover:bg-red-900/30 transition duration-150">
+                                    Delete
+                                </button>
+                            </div>
+                        `;
+                        mobileView.appendChild(mobileCard);
+                    }
+                });
+                
+            } catch (error) {
+                loading.classList.add('hidden');
+                showToast('Failed to load codes: ' + error.message, 'error');
+                console.error('Error loading codes:', error);
+            }
+        }
+        
+        // Rest of the JavaScript functions remain the same as previous version
+        // (generateCodes, exportCodes, toggleBulkImport, importBulkCodes, 
+        // openMarkUsedModal, closeMarkUsedModal, confirmMarkAsUsed, markAsUnused,
+        // openDeleteModal, closeDeleteModal, confirmDeleteCode, changePage, 
+        // copyGeneratedCodes, validateEmail)
+        
+        // Note: I've kept the backend interaction functions the same as in your previous version
+        // They will work with your Flask routes
+    </script>
+
+    <!-- Include the JavaScript functions from the previous version -->
+    <script>
+        // Change page
+        function changePage(direction) {
+            currentPage += direction;
+            
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            loadCodes();
+        }
+        
+        // Generate codes
+        async function generateCodes() {
+            const count = parseInt(document.getElementById('codeCount').value) || 10;
+            const value = parseInt(document.getElementById('codeValue').value) || 50;
+            const expiryDays = parseInt(document.getElementById('expiryDays').value) || 30;
+            const prefix = document.getElementById('codePrefix').value.trim() || 'PQ';
+            
+            if (count > 100) {
+                showToast('Cannot generate more than 100 codes at once', 'warning');
+                return;
+            }
+            
+            if (count <= 0) {
+                showToast('Please enter a valid number of codes', 'warning');
+                return;
+            }
+            
+            if (prefix.length > 6) {
+                showToast('Prefix must be 6 characters or less', 'warning');
+                return;
+            }
+            
+            try {
+                showToast('Generating codes...', 'info');
+                
+                const response = await fetch('/admin/api/verification-codes/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        count: count,
+                        value: value,
+                        expiry_days: expiryDays,
+                        prefix: prefix
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate codes');
+                }
+                
+                // Show generated codes
+                const codesList = document.getElementById('generatedCodesList');
+                const section = document.getElementById('generatedCodesSection');
+                
+                codesList.innerHTML = '';
+                data.codes.forEach(code => {
+                    const codeElement = document.createElement('div');
+                    codeElement.className = 'p-3 bg-dark-card/40 rounded-lg border border-dark-border';
+                    codeElement.innerHTML = `
+                        <div class="font-mono text-accent-green font-bold">${code}</div>
+                        <div class="text-xs text-gray-400 mt-1">
+                            Value: ${value} GHS • Expires in ${expiryDays} days
+                        </div>
+                    `;
+                    codesList.appendChild(codeElement);
+                });
+                
+                section.classList.remove('hidden');
+                showToast(data.message, 'success');
+                
+                // Scroll to generated codes
+                section.scrollIntoView({ behavior: 'smooth' });
+                
+                // Reload stats and codes list
+                loadStats();
+                loadCodes();
+                
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+                console.error('Error generating codes:', error);
+            }
+        }
+        
+        // Copy generated codes to clipboard
+        async function copyGeneratedCodes() {
+            const codes = Array.from(document.querySelectorAll('#generatedCodesList .font-mono'))
+                .map(el => el.textContent)
+                .join('\n');
+            
+            try {
+                await navigator.clipboard.writeText(codes);
+                showToast('All codes copied to clipboard!', 'success');
+            } catch (error) {
+                showToast('Failed to copy codes', 'error');
+            }
+        }
+        
+        // Export codes as CSV
+        async function exportCodes() {
+            try {
+                showToast('Exporting codes...', 'info');
+                
+                const response = await fetch('/admin/api/verification-codes/export');
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Export failed');
+                }
+                
+                // Create download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `verification-codes-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showToast('Codes exported successfully!', 'success');
+                
+            } catch (error) {
+                showToast('Export failed: ' + error.message, 'error');
+                console.error('Error exporting codes:', error);
+            }
+        }
+        
+        // Toggle bulk import section
+        function toggleBulkImport() {
+            const section = document.getElementById('bulkImportSection');
+            const generatedSection = document.getElementById('generatedCodesSection');
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                generatedSection.classList.add('hidden');
+                document.getElementById('bulkCodesInput').focus();
+            } else {
+                section.classList.add('hidden');
+            }
+        }
+        
+        // Import bulk codes
+        async function importBulkCodes() {
+            const codesText = document.getElementById('bulkCodesInput').value.trim();
+            
+            if (!codesText) {
+                showToast('Please enter codes to import', 'warning');
+                return;
+            }
+            
+            try {
+                showToast('Importing codes...', 'info');
+                
+                const response = await fetch('/admin/api/verification-codes/bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        codes: codesText
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Import failed');
+                }
+                
+                showToast(data.message, 'success');
+                document.getElementById('bulkCodesInput').value = '';
+                document.getElementById('bulkImportSection').classList.add('hidden');
+                
+                // Reload stats and codes list
+                loadStats();
+                loadCodes();
+                
+            } catch (error) {
+                showToast('Import failed: ' + error.message, 'error');
+                console.error('Error importing codes:', error);
+            }
+        }
+        
+        // Mark code as used - modal functions
+        function openMarkUsedModal(codeId) {
+            currentCodeId = codeId;
+            document.getElementById('markUsedModal').classList.remove('hidden');
+            document.getElementById('usedByEmail').value = '';
+            document.getElementById('usedByEmail').focus();
+        }
+        
+        function closeMarkUsedModal() {
+            document.getElementById('markUsedModal').classList.add('hidden');
+            currentCodeId = null;
+        }
+        
+        async function confirmMarkAsUsed() {
+            const email = document.getElementById('usedByEmail').value.trim();
+            
+            if (!email) {
+                showToast('Please enter user email', 'warning');
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showToast('Please enter a valid email address', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/api/verification-codes/${currentCodeId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        used: true,
+                        usedByEmail: email
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to update code');
+                }
+                
+                showToast('Code marked as used successfully!', 'success');
+                closeMarkUsedModal();
+                loadStats();
+                loadCodes();
+                
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+                console.error('Error marking code as used:', error);
+            }
+        }
+        
+        // Mark code as unused
+        async function markAsUnused(codeId) {
+            if (!confirm('Mark this code as unused? This will allow it to be used again.')) return;
+            
+            try {
+                const response = await fetch(`/admin/api/verification-codes/${codeId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        used: false
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to update code');
+                }
+                
+                showToast('Code marked as unused!', 'success');
+                loadStats();
+                loadCodes();
+                
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+                console.error('Error marking code as unused:', error);
+            }
+        }
+        
+        // Delete code - modal functions
+        function openDeleteModal(codeId) {
+            currentCodeId = codeId;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+        
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            currentCodeId = null;
+        }
+        
+        async function confirmDeleteCode() {
+            try {
+                const response = await fetch(`/admin/api/verification-codes/${currentCodeId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to delete code');
+                }
+                
+                showToast('Code deleted successfully!', 'success');
+                closeDeleteModal();
+                loadStats();
+                loadCodes();
+                
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+                console.error('Error deleting code:', error);
+            }
+        }
+        
+        // Helper function to validate email
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+    </script>
+</body>
+</html>

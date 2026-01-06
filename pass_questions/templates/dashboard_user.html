@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Passco Student Hub</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind for a modern slate/green dark theme -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'accent-green': '#10b981',      // Emerald 500
+                        'bg-dark': '#0f172a',           // Slate 900 (The "light black")
+                        'bg-light': '#f1f5f9',          // Slate 100
+                        'card-dark': '#1e293b',         // Slate 800
+                        'card-light': '#ffffff',        // White for light mode cards
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'header-glow': '0 4px 15px rgba(0, 0, 0, 0.2)',
+                        'card-shadow': '0 10px 30px rgba(0, 0, 0, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .dark {
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+        }
+
+        .light {
+            color: #1e293b; /* Slate 800 for text in light mode */
+        }
+
+        .main-container {
+            min-height: calc(100vh - 80px); 
+        }
+
+        /* Custom Card Style for Premium Look */
+        .premium-card {
+            background-color: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .light .premium-card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            color: #1e293b;
+        }
+        
+        .premium-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        }
+        
+        .light .premium-card:hover {
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Section for Feature Guide Cards (Tutorial) */
+        .feature-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+            border-left: 4px solid #10b981;
+        }
+        
+        .light .feature-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(241, 245, 249, 0.9));
+            color: #1e293b;
+        }
+
+        /* Styling for textbook cards */
+        .textbook-card {
+            background-color: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .light .textbook-card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            color: #1e293b;
+        }
+        
+        .textbook-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .light .textbook-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Fix text colors for light mode */
+        .light .text-white {
+            color: #1e293b !important;
+        }
+        
+        .light .text-slate-300,
+        .light .text-slate-400 {
+            color: #64748b !important; /* Slate 500 for lighter text */
+        }
+        
+        .light .border-slate-700 {
+            border-color: #cbd5e1; /* Slate 300 */
+        }
+        
+        .light .bg-card-dark {
+            background-color: #f8fafc; /* Slate 50 */
+        }
+        
+        .light .bg-yellow-900\/10 {
+            background-color: #fef3c7; /* Amber 100 */
+            border-color: #f59e0b; /* Amber 500 */
+        }
+        
+        .light .text-yellow-300 {
+            color: #d97706; /* Amber 600 */
+        }
+        
+        /* Profile initial style */
+        .profile-initial {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        /* Session notification style */
+        .session-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(239, 68, 68, 0.95);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .session-notification.success {
+            background: rgba(16, 185, 129, 0.95);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .session-notification.warning {
+            background: rgba(245, 158, 11, 0.95);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        /* Session status indicator */
+        .session-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #10b981;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 12px;
+            color: #10b981;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .session-status.offline {
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        .session-status-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        .session-status.offline .session-status-pulse {
+            background: #ef4444;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+        }
+    </style>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark flex flex-col min-h-screen">
+
+    <!-- Session Status Indicator -->
+    <div id="sessionStatus" class="session-status hidden">
+        <div class="session-status-pulse"></div>
+        <span>Session Active</span>
+    </div>
+
+    <!-- Header and Navigation Wrapper -->
+    <header class="sticky top-0 z-30 bg-white/70 dark:bg-bg-dark/70 backdrop-blur-xl border-b dark:border-slate-800 shadow-header-glow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Logo Image Only -->
+            <a href="/dashboard">
+                <img 
+                    src="/static/images/logo.png" 
+                    alt="PASSCO Logo" 
+                    class="h-8 w-auto md:h-10 w-auto object-contain"
+                    onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50/10B981/FFFFFF?text=PASSCO'"
+                >
+            </a>
+
+            <!-- Desktop Navigation -->
+            <nav class="hidden lg:flex items-center space-x-6">
+                <!-- Highlighted as Active Page -->
+                <a href="/dashboard" class="nav-item text-accent-green dark:text-accent-green transition duration-200 font-medium border-b-2 border-accent-green">Dashboard/Home</a>
+                <a href="/questions" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Questions</a>
+                <a href="/quiz" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Quiz</a>
+                <a href="#" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Analytics</a>
+                
+                <!-- Desktop Logout Button -->
+                <a href="/auth/logout" class="nav-item text-slate-500 dark:text-slate-300 hover:text-red-500 hover:dark:text-red-400 transition duration-200 font-medium ml-2">
+                    Logout
+                </a>
+            </nav>
+
+            <!-- Mobile Menu, Theme Toggle, and Profile Container -->
+            <div class="flex items-center space-x-3">
+                
+                <!-- Profile Picture (Round form) - Dynamic User Initial -->
+                {% if user and user.username %}
+                    {% set username = user.username %}
+                    {% set first_letter = username[0] if username else 'U' %}
+                {% else %}
+                    {% set first_letter = 'U' %}
+                {% endif %}
+                
+                <a href="#" class="block p-0.5 rounded-full ring-2 ring-accent-green/70 hover:ring-accent-green transition duration-200" title="Profile">
+                    <div class="w-6 h-6 rounded-full bg-accent-green flex items-center justify-center profile-initial text-white text-xs font-bold">
+                        {{ first_letter }}
+                    </div>
+                </a>
+                
+                <!-- Theme Toggle Button -->
+                <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-card-dark transition duration-200">
+                    <svg id="themeIcon" class="w-6 h-6 text-yellow-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+
+                <!-- Mobile Menu Button (Hamburger) -->
+                <button id="menuToggle" class="p-2 rounded-lg lg:hidden hover:bg-gray-100 dark:hover:bg-card-dark transition duration-200">
+                    <svg class="w-6 h-6 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown (Hidden by default) -->
+        <nav id="mobileMenu" class="lg:hidden hidden px-4 pb-4 border-t dark:border-slate-800">
+            <div class="flex flex-col space-y-1 mt-2">
+                <a href="/dashboard" class="nav-item w-full p-3 rounded-lg bg-accent-green/20 dark:text-white text-slate-800 font-bold">Home</a>
+                <a href="/questions" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium">Questions</a>
+                <a href="/quiz" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium">Quiz</a>
+                <a href="#" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium">Analytics</a>
+                
+                <!-- Mobile Logout Button -->
+                <a href="/auth/logout" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-red-500/10 font-medium border-t border-slate-200 dark:border-slate-700 mt-2 pt-2">
+                    <span class="text-red-500 dark:text-red-400">Logout</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4 sm:p-8 main-container">
+        
+        <!-- Welcome Banner -->
+        <div class="bg-gradient-to-r from-accent-green/10 to-transparent p-6 sm:p-8 rounded-xl mb-8 border border-accent-green/30 shadow-lg">
+            <h1 class="text-3xl sm:text-4xl font-extrabold dark:text-white text-slate-800 tracking-tight mb-2">
+                Welcome back, <span class="text-accent-green">
+                    {% if user and user.username %}
+                        {{ user.username }}
+                    {% else %}
+                        Student
+                    {% endif %}
+                </span>!
+            </h1>
+            <p class="text-slate-600 dark:text-slate-400 text-lg">
+                Your journey into ATU courses starts here. Focus, practice, and let's achieve that top score.
+            </p>
+        </div>
+
+        <!-- Grid Layout for Dashboard Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            
+            <!-- 1. User Profile and Quick Stats Card (Column Span 1) - COMPACT VERSION -->
+            <div class="lg:col-span-1 premium-card p-6 rounded-xl">
+                <div class="flex items-center space-x-4 mb-4 border-b pb-4 dark:border-slate-700 border-slate-200">
+                    <div class="w-16 h-16 rounded-full bg-accent-green flex items-center justify-center ring-4 ring-accent-green/30 profile-initial text-white text-2xl font-bold">
+                        {% if user and user.username %}
+                            {% set username = user.username %}
+                            {% set first_letter = username[0] if username else 'U' %}
+                            {{ first_letter }}
+                        {% else %}
+                            U
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold dark:text-white text-slate-800">
+                            {% if user and user.username %}
+                                {{ user.username }}
+                            {% else %}
+                                User Name
+                            {% endif %}
+                        </h2>
+                        <p class="text-sm dark:text-slate-400 text-slate-600">
+                            {% if user and user.email %}
+                                {{ user.email }}
+                            {% else %}
+                                user@example.com
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <h3 class="text-md font-semibold text-accent-green mb-3 uppercase">Performance Snapshot</h3>
+                <div class="space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                <span class="dark:text-slate-300 text-slate-600">Total Quizzes:</span>
+                <span id="userTotalQuizzes" class="font-bold dark:text-white text-slate-800">0</span>
+            </div>
+    <div class="flex justify-between items-center text-sm">
+        <span class="dark:text-slate-300 text-slate-600">Avg Score:</span>
+        <span id="userAvgScore" class="font-bold text-yellow-500 dark:text-yellow-400">0%</span>
+    </div>
+    <div class="flex justify-between items-center text-sm">
+        <span class="dark:text-slate-300 text-slate-600">Last Active:</span>
+        <span id="userLastActive" class="font-bold dark:text-white text-slate-800">N/A</span>
+    </div>
+    <a href="/analytics" class="w-full inline-block mt-3 text-center py-2 px-4 bg-accent-green hover:bg-accent-green/80 text-white dark:text-bg-dark font-bold rounded-lg transition duration-200 shadow-lg text-sm">
+        View Analytics
+    </a>
+</div>
+
+
+            </div>
+
+            <!-- 2. Academic Resources & Encouragement Card (Column Span 2) -->
+            <div class="lg:col-span-2 premium-card p-6 rounded-xl">
+                <h2 class="text-2xl font-bold text-accent-green mb-4">Resources for Success</h2>
+                <p class="dark:text-slate-400 text-slate-600 mb-5">
+                    To excel in your technical or creative program, targeted practice and specialized resources are essential. Use these curated academic links and references to supplement your preparation!
+                </p>
+                
+                <!-- Foundational Learning & Practice -->
+                <h3 class="text-lg font-bold dark:text-slate-300 text-slate-700 mb-3 border-b dark:border-slate-700 border-slate-200 pb-1">Foundational Learning & Practice</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/" target="_blank" class="p-4 rounded-lg bg-card-dark dark:bg-card-dark hover:bg-slate-700 dark:hover:bg-slate-700 transition duration-200 border dark:border-slate-700/50 border-slate-200">
+                        <p class="font-bold dark:text-white text-slate-800">MIT Algorithms</p>
+                        <p class="text-xs dark:text-slate-400 text-slate-600">Introduction to Algorithms</p>
+                    </a>
+                    <a href="https://www.codecademy.com/" target="_blank" class="p-4 rounded-lg bg-card-dark dark:bg-card-dark hover:bg-slate-700 dark:hover:bg-slate-700 transition duration-200 border dark:border-slate-700/50 border-slate-200">
+                        <p class="font-bold dark:text-white text-slate-800">CodeCademy (Mock)</p>
+                        <p class="text-xs dark:text-slate-400 text-slate-600">Interactive Coding Lessons</p>
+                    </a>
+                    <a href="https://www.w3schools.com/" target="_blank" class="p-4 rounded-lg bg-card-dark dark:bg-card-dark hover:bg-slate-700 dark:hover:bg-slate-700 transition duration-200 border dark:border-slate-700/50 border-slate-200">
+                        <p class="font-bold dark:text-white text-slate-800">W3Schools</p>
+                        <p class="text-xs dark:text-slate-400 text-slate-600">Web Development Tutorials</p>
+                    </a>
+                </div>
+
+                <!-- Essential Online Textbooks (UPDATED CONTENT) -->
+                <h3 class="text-lg font-bold dark:text-slate-300 text-slate-700 mb-3 border-b dark:border-slate-700 border-slate-200 pb-1">Essential Online Textbooks</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                    <!-- Book 1: SICP -->
+                    <a href="https://web.mit.edu/6.001/6.001.src/main.html" target="_blank" class="textbook-card block p-3 rounded-lg flex flex-col items-center text-center">
+                        <img src="https://libraries.mit.edu/app/uploads/sites/4/2016/01/MITPress-Logo-201x300.jpg" alt="SICP Book Cover" class="w-20 h-24 object-contain mb-2 rounded shadow-md">
+                        <p class="font-bold dark:text-white text-slate-800 text-sm leading-tight">Structure & Interpretation of CS Programs</p>
+                        <p class="text-xs dark:text-slate-400 text-slate-600">MIT Press</p>
+                    </a>
+
+                    <!-- Book 2: Open Data Structures -->
+                    <a href="https://ods.cs.uwaterloo.ca/" target="_blank" class="textbook-card block p-3 rounded-lg flex flex-col items-center text-center">
+                        <img src="https://www.cengage.com/covers/imageServlet?catalog=cengage&productISBN13=9780357673560&image_type=LRGFC" alt="Open Data Structures Book Cover" class="w-20 h-24 object-contain mb-2 rounded shadow-md">
+                        <p class="font-bold dark:text-white text-slate-800 text-sm leading-tight">Open Data Structures</p>
+                        <p class="text-xs dark:text-slate-400 text-slate-600">Algorithms & Data Structures</p>
+                    </a>
+
+                    <!-- Book 3: Think Python -->
+                    <a href="https://greenteapress.com/wp/think-python-2e/" target="_blank" class="textbook-card block p-3 rounded-lg flex flex-col items-center text-center">
+                        <img src="https://m.media-amazon.com/images/I/71GCl3P0b+L._SL1250_.jpg" alt="Think Python Book Cover" class="w-20 h-24 object-contain mb-2 rounded shadow-md">
+                        <p class="font-bold dark:text-white text-slate-800 text-sm leading-tight">Think Python: How to Think Like a Computer Scientist</p>
+                        <p class="text-xs dark:text-slate-400 text-slate-600">Interactive Python</p>
+                    </a>
+
+                    <!-- Book 4: Programming Pearls -->
+                    <a href="https://www.cs.princeton.edu/courses/archive/fall09/cos333/reading/PP-chapter1.pdf" target="_blank" class="textbook-card block p-3 rounded-lg flex flex-col items-center text-center">
+                        <img src="https://m.media-amazon.com/images/S/compressed.photo.goodreads.com/books/1693747906i/198291552.jpg" alt="Programming Pearls Book Cover" class="w-20 h-24 object-contain mb-2 rounded shadow-md">
+                        <p class="font-bold dark:text-white text-slate-800 text-sm leading-tight">Programming Pearls</p>
+                        <p class="text-xs dark:text-slate-400 text-slate-600">Classic Problem Solving</p>
+                    </a>
+                </div>
+
+                <div class="mt-6 p-4 rounded-lg border border-yellow-500/50 dark:bg-yellow-900/10 bg-yellow-50">
+                    <p class="text-sm font-semibold text-yellow-600 dark:text-yellow-300">
+                        Encouragement: The most successful students aren't born—they're built through persistence. Keep studying, keep reviewing, and don't be afraid to stumble! Every challenge is a lesson.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Navigation Tutorial / Feature Guide -->
+        <h2 class="text-3xl font-bold dark:text-white text-slate-800 mb-6 border-b dark:border-slate-700 border-slate-200 pb-2">Quick Navigation Guide</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <!-- Guide Card 1: Questions -->
+            <div class="feature-card p-6 rounded-xl">
+                <div class="text-accent-green mb-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold dark:text-white text-slate-800 mb-2">The Questions Library</h3>
+                <p class="text-sm dark:text-slate-300 text-slate-600">
+                    This is your comprehensive vault. Find all past exam PDFs and mock papers categorized neatly by Program, Course, and Year. Study at your own pace.
+                </p>
+                <a href="/questions" class="text-accent-green text-sm font-semibold mt-3 block">Go to Questions →</a>
+            </div>
+
+            <!-- Guide Card 2: Quiz -->
+            <div class="feature-card p-6 rounded-xl">
+                <div class="text-accent-green mb-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4 0V3h-2v2m0 16h2m-2-6h2m-2-4h2"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold dark:text-white text-slate-800 mb-2">Test Your Skills (Quiz)</h3>
+                <p class="text-sm dark:text-slate-300 text-slate-600">
+                    Challenge yourself with randomized questions from our past papers database. Choose a specific topic or course to test your readiness and identify weak spots.
+                </p>
+                <a href="/quiz" class="text-accent-green text-sm font-semibold mt-3 block">Start a Quiz →</a>
+            </div>
+
+            <!-- Guide Card 3: Analytics -->
+            <div class="feature-card p-6 rounded-xl">
+                <div class="text-accent-green mb-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold dark:text-white text-slate-800 mb-2">Track Your Progress (Analytics)</h3>
+                <p class="text-sm dark:text-slate-300 text-slate-600">
+                    View continuous calculations of your performance. See where you excel and where you need improvement. Data is key to mastery
+                </p>
+                <a href="#" class="text-accent-green text-sm font-semibold mt-3 block">View Analytics →</a>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modern Footer -->
+    <footer class="mt-8 py-6 border-t dark:border-slate-800 border-slate-200 bg-white/5 dark:bg-bg-dark/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0">
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                    &copy; <span id="currentYear"></span> Passco Student Hub. All rights reserved.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+            <!-- JavaScript for Interactivity and Session Management -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body.parentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+            const currentYear = document.getElementById('currentYear');
+            
+            // Set current year in footer
+            currentYear.textContent = new Date().getFullYear();
+
+            // --- Theme Toggle Logic ---
+            let theme = localStorage.getItem('theme') || 'dark';
+            
+            const updateTheme = (newTheme) => {
+                body.classList.remove('light', 'dark');
+                body.classList.add(newTheme);
+                localStorage.setItem('theme', newTheme);
+                theme = newTheme;
+                
+                // Update icon to reflect the *opposite* theme
+                if (newTheme === 'dark') {
+                    themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>`;
+                    themeIcon.classList.remove('text-slate-700');
+                    themeIcon.classList.add('text-yellow-500');
+                } else {
+                    themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>`;
+                    themeIcon.classList.remove('text-yellow-500');
+                    themeIcon.classList.add('text-slate-700');
+                }
+            };
+            
+            // Initial theme application
+            updateTheme(theme);
+            
+            themeToggle.addEventListener('click', () => {
+                const newTheme = theme === 'dark' ? 'light' : 'dark';
+                updateTheme(newTheme);
+            });
+
+            // --- Mobile Menu Toggle Logic ---
+            menuToggle.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // Close mobile menu when a link is clicked
+            mobileMenu.querySelectorAll('.nav-item').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+
+            // --- BACKGROUND Session Management (No UI) ---
+            
+            // Remove the session status indicator from DOM
+            const sessionStatus = document.getElementById('sessionStatus');
+            if (sessionStatus) {
+                sessionStatus.remove();
+            }
+            
+            // Function to check session validity silently
+            async function checkSession() {
+                try {
+                    const response = await fetch('/auth/api/session/check');
+                    
+                    if (!response.ok) {
+                        // Session is invalid, redirect to login immediately
+                        console.log('Session expired, redirecting to login...');
+                        window.location.href = '/auth/login';
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.valid) {
+                        // Session is invalid, redirect to login
+                        console.log('Session invalid, redirecting to login...');
+                        window.location.href = '/auth/login';
+                    }
+                    // If valid, do nothing - session is fine
+                } catch (error) {
+                    // Network error - don't redirect, just log it
+                    console.log('Session check failed (network error):', error.message);
+                    // Don't redirect on network errors to avoid breaking UX
+                }
+            }
+
+            // Initial silent session check (with slight delay to not block page load)
+            setTimeout(checkSession, 1000);
+
+            // Periodic silent session check every 5 minutes
+            setInterval(checkSession, 300000);
+
+            // Silent session refresh to keep session alive
+            async function refreshSession() {
+                try {
+                    await fetch('/auth/api/session/refresh', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        // Add CSRF token if needed
+                        // body: JSON.stringify({ csrfToken: 'your-token-here' })
+                    });
+                } catch (error) {
+                    // Silent fail - don't disrupt user experience
+                    console.log('Session refresh failed:', error.message);
+                }
+            }
+
+            // Refresh session every 10 minutes to keep it alive
+            setInterval(refreshSession, 600000);
+
+            // Silent activity tracking to keep session alive
+            let activityTimer;
+            
+            function resetActivityTimer() {
+                clearTimeout(activityTimer);
+                // Check session after 20 minutes of inactivity
+                activityTimer = setTimeout(checkSession, 1200000);
+            }
+
+            // Reset timer on user activity (silently)
+            ['click', 'mousemove', 'keypress', 'scroll'].forEach(eventType => {
+                document.addEventListener(eventType, resetActivityTimer, { passive: true });
+            });
+
+            // Start the inactivity timer
+            resetActivityTimer();
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                clearTimeout(activityTimer);
+            });
+        });
+    </script>
+    <script>
+// Function to load user performance data from your existing analytics API
+async function loadUserPerformanceData() {
+    try {
+        // Call your existing analytics API endpoint
+        const response = await fetch('/api/analytics');
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.warn('API returned unsuccessful:', data);
+            return;
+        }
+        
+        const analytics = data.analytics;
+        
+        // If no data yet, show default values
+        if (!analytics.has_data) {
+            console.log('No analytics data available yet');
+            return;
+        }
+        
+        // Update total quizzes from overall_stats
+        const totalQuizzes = analytics.overall_stats?.total_quizzes || 0;
+        document.getElementById('userTotalQuizzes').textContent = totalQuizzes;
+        
+        // Update average score with proper formatting
+        const avgScore = analytics.overall_stats?.average_score || 0;
+        const avgScoreElement = document.getElementById('userAvgScore');
+        
+        // Format score with 1 decimal place if needed
+        let displayScore;
+        if (avgScore % 1 === 0) {
+            displayScore = Math.round(avgScore);
+        } else {
+            displayScore = avgScore.toFixed(1);
+        }
+        
+        avgScoreElement.textContent = `${displayScore}%`;
+        
+        // Color code based on score
+        if (avgScore >= 80) {
+            avgScoreElement.className = 'font-bold text-green-500 dark:text-green-400';
+        } else if (avgScore >= 60) {
+            avgScoreElement.className = 'font-bold text-yellow-500 dark:text-yellow-400';
+        } else {
+            avgScoreElement.className = 'font-bold text-red-500 dark:text-red-400';
+        }
+        
+        // Update last active time from recent quizzes
+        const lastActive = getLastActiveFromRecentQuizzes(analytics.recent_quizzes || []);
+        document.getElementById('userLastActive').textContent = lastActive;
+        
+        // Optional: Add a subtle update indicator
+        showDataUpdated();
+        
+    } catch (error) {
+        console.error('Error loading user performance data:', error);
+        // Show error state
+        document.getElementById('userAvgScore').className = 'font-bold text-red-500 dark:text-red-400';
+        document.getElementById('userAvgScore').textContent = 'Error';
+        document.getElementById('userLastActive').textContent = 'Try again';
+    }
+}
+
+// Helper function to get last active time from recent quizzes
+function getLastActiveFromRecentQuizzes(recentQuizzes) {
+    if (!Array.isArray(recentQuizzes) || recentQuizzes.length === 0) {
+        return 'Never';
+    }
+    
+    // Find the most recent quiz by date
+    let mostRecent = null;
+    
+    for (const quiz of recentQuizzes) {
+        const quizDate = quiz.date || quiz.timestamp;
+        if (!quizDate) continue;
+        
+        try {
+            const dateObj = new Date(quizDate);
+            if (!mostRecent || dateObj > mostRecent.dateObj) {
+                mostRecent = {
+                    dateObj: dateObj,
+                    dateStr: quizDate
+                };
+            }
+        } catch (e) {
+            // Skip invalid dates
+            continue;
+        }
+    }
+    
+    if (!mostRecent) {
+        return 'Recently';
+    }
+    
+    // Format time ago
+    return formatTimeAgo(mostRecent.dateObj);
+}
+
+// Helper function to format time ago
+function formatTimeAgo(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    const diffWeeks = Math.floor(diffDays / 7);
+    
+    if (diffSeconds < 60) {
+        return 'Just now';
+    } else if (diffMinutes < 60) {
+        return `${diffMinutes}m ago`;
+    } else if (diffHours < 24) {
+        return `${diffHours}h ago`;
+    } else if (diffDays < 7) {
+        return `${diffDays}d ago`;
+    } else if (diffWeeks < 4) {
+        return `${diffWeeks}w ago`;
+    } else {
+        return date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: diffDays > 365 ? 'numeric' : undefined
+        });
+    }
+}
+
+// Show data was updated (optional visual feedback)
+function showDataUpdated() {
+    const totalQuizzesEl = document.getElementById('userTotalQuizzes');
+    const avgScoreEl = document.getElementById('userAvgScore');
+    const lastActiveEl = document.getElementById('userLastActive');
+    
+    // Add brief highlight animation
+    [totalQuizzesEl, avgScoreEl, lastActiveEl].forEach(el => {
+        if (el) {
+            el.classList.add('updated-highlight');
+            setTimeout(() => {
+                el.classList.remove('updated-highlight');
+            }, 1000);
+        }
+    });
+}
+
+// Add CSS for highlight animation
+const style = document.createElement('style');
+style.textContent = `
+    .updated-highlight {
+        animation: highlightPulse 1s ease-in-out;
+    }
+    
+    @keyframes highlightPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+`;
+document.head.appendChild(style);
+
+// Load data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Load immediately
+    loadUserPerformanceData();
+    
+    // Refresh every 5 minutes (or whenever you think is appropriate)
+    setInterval(loadUserPerformanceData, 5 * 60 * 1000);
+    
+    // Also refresh when page becomes visible again
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            // Wait a moment before refreshing
+            setTimeout(loadUserPerformanceData, 1000);
+        }
+    });
+});
+
+// Make function available globally for manual refresh
+window.refreshPerformanceSnapshot = loadUserPerformanceData;
+
+// Optional: Add refresh button event listener if you have one
+document.addEventListener('click', function(e) {
+    if (e.target.matches('[data-refresh-performance]')) {
+        e.preventDefault();
+        loadUserPerformanceData();
+    }
+});
+</script>
+</body>
+</html>

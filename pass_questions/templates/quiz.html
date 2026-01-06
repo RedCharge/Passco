@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Center | Passco Student Hub</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'accent-green': '#10b981',
+                        'bg-dark': '#0f172a',
+                        'bg-light': '#f1f5f9',
+                        'card-dark': '#1e293b',
+                        'card-light': '#ffffff',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'header-glow': '0 4px 15px rgba(0, 0, 0, 0.2)',
+                        'card-shadow': '0 10px 30px rgba(0, 0, 0, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .dark {
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+        }
+
+        .light {
+            color: #1e293b;
+        }
+
+        /* Custom Card Style for Premium Look */
+        .premium-card {
+            background-color: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .light .premium-card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .premium-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .light .premium-card:hover {
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .quiz-option {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .quiz-option:hover {
+            border-color: #10b981;
+            transform: translateY(-2px);
+        }
+
+        .quiz-option.selected {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .quiz-option.correct {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .quiz-option.incorrect {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(16, 185, 129, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .course-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .course-card:hover {
+            border-color: #10b981;
+            transform: translateY(-3px);
+        }
+
+        .program-item {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .program-item:hover {
+            border-color: #10b981;
+            transform: translateY(-2px);
+        }
+
+        .program-item.active {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        /* Program card with image and overlay */
+        .program-card {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .program-card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .program-card-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.3));
+            display: flex;
+            align-items: flex-end;
+            padding: 1rem;
+            color: white;
+        }
+
+        .program-card:hover .program-card-image {
+            transform: scale(1.05);
+        }
+
+        .program-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Profile dropdown */
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+            z-index: 40;
+        }
+
+        .dark .profile-dropdown {
+            background: #1e293b;
+            border-color: #374151;
+        }
+
+        .profile-dropdown.show {
+            display: block;
+        }
+
+        /* User initials avatar */
+        .user-initials {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* Text color fixes for light mode */
+        .light .text-white {
+            color: #1e293b !important;
+        }
+        
+        .light .text-slate-300,
+        .light .text-slate-400 {
+            color: #64748b !important;
+        }
+
+        .light .bg-card-dark {
+            background-color: #ffffff !important;
+        }
+
+        /* Light mode fixes for filter inputs */
+        .light .filter-input {
+            background-color: white !important;
+            border-color: #e2e8f0 !important;
+            color: #1e293b !important;
+        }
+
+        .light .filter-input::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        /* Light mode fixes for select */
+        .light select.filter-input {
+            background-color: white !important;
+            color: #1e293b !important;
+        }
+
+        .light select.filter-input option {
+            background-color: white;
+            color: #1e293b;
+        }
+
+        /* Back to programs button fix for light mode */
+        .light .back-button {
+            background-color: #475569 !important;
+            color: white !important;
+        }
+
+        .light .back-button:hover {
+            background-color: #334155 !important;
+        }
+
+        /* Course card overlay for light mode */
+        .light .course-card {
+            background-color: white;
+            border: 1px solid #e2e8f0;
+        }
+
+        .light .course-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Review section colors fix */
+        .light .review-option-correct {
+            background-color: #dcfce7 !important;
+            color: #166534 !important;
+            border-color: #86efac !important;
+        }
+
+        .light .review-option-incorrect {
+            background-color: #fee2e2 !important;
+            color: #991b1b !important;
+            border-color: #fca5a5 !important;
+        }
+
+        .light .review-option-default {
+            background-color: #f8fafc !important;
+            color: #475569 !important;
+            border-color: #e2e8f0 !important;
+        }
+
+        /* Mobile responsiveness for quiz navigation */
+        @media (max-width: 640px) {
+            .quiz-navigation {
+                flex-direction: column-reverse;
+                gap: 1rem;
+            }
+            
+            .quiz-navigation button {
+                width: 100%;
+            }
+            
+            .quiz-buttons-group {
+                display: flex;
+                width: 100%;
+                gap: 0.5rem;
+            }
+            
+            .quiz-buttons-group button {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark flex flex-col min-h-screen">
+
+    <header class="sticky top-0 z-30 bg-white/70 dark:bg-bg-dark/70 backdrop-blur-xl border-b dark:border-slate-800 shadow-header-glow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Logo Image Only -->
+            <a href="/dashboard">
+                <img 
+                    src="/static/images/logo.png" 
+                    alt="PASSCO Logo" 
+                    class="h-8 w-auto md:h-10 w-auto object-contain"
+                    onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50/10B981/FFFFFF?text=PASSCO'"
+                >
+            </a>
+
+            <!-- Desktop Navigation -->
+            <nav class="hidden lg:flex space-x-6 items-center">
+                <a href="/dashboard" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Dashboard/Home</a>
+                <a href="/questions" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Questions</a>
+                <a href="/quiz" class="nav-item text-accent-green dark:text-accent-green transition duration-200 font-medium border-b-2 border-accent-green">Quiz</a>
+                <a href="#" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Analytics</a>
+            </nav>
+
+            <!-- Mobile Menu, Theme Toggle, and Profile Container -->
+            <div class="flex items-center space-x-3">
+                <!-- Profile Dropdown -->
+                <div class="relative">
+                    <button id="profileDropdownButton" class="block p-0.5 rounded-full ring-2 ring-accent-green/70 hover:ring-accent-green transition duration-200" title="Profile">
+                        <div id="userInitials" class="user-initials">
+                            <!-- User initials will be dynamically set -->
+                        </div>
+                    </button>
+                    
+                    <!-- Profile Dropdown Menu -->
+                    <div id="profileDropdown" class="profile-dropdown">
+                        <div class="p-4 border-b dark:border-gray-600">
+                            {% if user and user.username %}
+                                <p class="font-medium text-gray-900 dark:text-white" id="dropdownUserName">
+                                    {{ user.username }}
+                                </p>
+                            {% else %}
+                                <p class="font-medium text-gray-900 dark:text-white" id="dropdownUserName">
+                                    Welcome!
+                                </p>
+                            {% endif %}
+                            
+                            {% if user and user.email %}
+                                <p class="text-sm text-gray-500 dark:text-gray-400" id="dropdownUserEmail">
+                                    {{ user.email }}
+                                </p>
+                            {% else %}
+                                <p class="text-sm text-gray-500 dark:text-gray-400" id="dropdownUserEmail">
+                                    student@example.com
+                                </p>
+                            {% endif %}
+                        </div>
+                        <div class="p-2">
+                            {% if user and user.uid %}
+                                <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition duration-200 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                    <span>My Profile</span>
+                                </a>
+                                <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition duration-200 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    <span>Settings</span>
+                                </a>
+                                <button onclick="logout()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition duration-200 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                    </svg>
+                                    <span>Logout</span>
+                                </button>
+                            {% else %}
+                                <a href="/auth/login" class="block px-4 py-2 text-sm text-accent-green hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition duration-200 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                                    </svg>
+                                    <span>Login</span>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Theme Toggle Button -->
+                <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-card-dark transition duration-200">
+                    <svg id="themeIcon" class="w-6 h-6 text-yellow-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+
+                <!-- Mobile Menu Button -->
+                <button id="menuToggle" class="p-2 rounded-lg lg:hidden hover:bg-gray-100 dark:hover:bg-card-dark transition duration-200">
+                    <svg class="w-6 h-6 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <nav id="mobileMenu" class="lg:hidden hidden px-4 pb-4 border-t dark:border-slate-800">
+            <div class="flex flex-col space-y-1 mt-2">
+                <a href="/dashboard" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="/questions" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span>Questions</span>
+                </a>
+                <a href="/quiz" class="nav-item w-full p-3 rounded-lg bg-accent-green/20 dark:text-white text-slate-800 font-bold flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <span>Quiz</span>
+                </a>
+                <a href="/analytics" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span>Analytics</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4 sm:p-8">
+        
+        <!-- Quiz Home Screen -->
+        <div id="quizHomeScreen">
+            <!-- Page Header -->
+            <div class="bg-gradient-to-r from-accent-green/10 to-transparent p-6 sm:p-8 rounded-xl mb-8 border border-accent-green/30 shadow-lg">
+                <h1 class="text-3xl sm:text-4xl font-extrabold dark:text-white text-slate-800 tracking-tight mb-2">
+                    Quiz Center
+                </h1>
+                <p class="text-slate-600 dark:text-slate-400 text-lg">
+                    Test your knowledge with practice quizzes. Choose your program and course to start.
+                </p>
+            </div>
+
+            <!-- Program Navigation -->
+            <div class="premium-card p-6 rounded-xl mb-8">
+                <h2 class="text-xl font-bold text-accent-green mb-4">Select Your Program</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="programNav">
+                    <!-- Programs will be dynamically loaded here -->
+                </div>
+            </div>
+
+            <!-- Filter Section (Hidden until program is selected) -->
+            <div id="filterSection" class="hidden premium-card p-6 rounded-xl mb-8">
+                <h2 class="text-xl font-bold text-accent-green mb-4">Filter Courses</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block dark:text-gray-300 text-slate-700 mb-2 font-medium">Course</label>
+                        <input type="text" id="filterCourse" class="w-full filter-input bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-800 dark:text-white p-3 rounded-lg" 
+                               placeholder="Enter course name...">
+                    </div>
+                    <div>
+                        <label class="block dark:text-gray-300 text-slate-700 mb-2 font-medium">Level</label>
+                        <select id="filterLevel" class="w-full filter-input bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-800 dark:text-white p-3 rounded-lg">
+                            <option value="">All Levels</option>
+                            <option value="100">Level 100</option>
+                            <option value="200">Level 200</option>
+                            <option value="300">Level 300</option>
+                            <option value="400">Level 400</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block dark:text-gray-300 text-slate-700 mb-2 font-medium">Semester</label>
+                        <select id="filterSemester" class="w-full filter-input bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-800 dark:text-white p-3 rounded-lg">
+                            <option value="">All Semesters</option>
+                            <option value="First">First Semester</option>
+                            <option value="Second">Second Semester</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block dark:text-gray-300 text-slate-700 mb-2 font-medium">Difficulty</label>
+                        <select id="filterDifficulty" class="w-full filter-input bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-800 dark:text-white p-3 rounded-lg">
+                            <option value="">All Difficulties</option>
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-between">
+                    <button onclick="applyFilters()" class="px-6 py-2 bg-accent-green hover:bg-emerald-600 text-white rounded-lg transition duration-200">
+                        Apply Filters
+                    </button>
+                    <button onclick="clearFilters()" class="px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition duration-200">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Courses Section -->
+            <div id="coursesSection" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold dark:text-white text-slate-800" id="selectedProgramTitle">Available Courses</h2>
+                    <button onclick="backToPrograms()" class="px-4 py-2 back-button bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition duration-200 text-sm">
+                        ← Back to Programs
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="coursesGrid">
+                    <!-- Courses will be dynamically loaded here -->
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-slate-600 dark:text-slate-400">Loading quiz data...</p>
+            </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" class="hidden">
+            <!-- Quiz Header -->
+            <div class="premium-card p-6 mb-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                    <div>
+                        <h2 id="quizCourseTitle" class="text-2xl font-bold dark:text-white text-slate-800">Quiz</h2>
+                        <p id="quizDescription" class="text-slate-600 dark:text-slate-400">Test your knowledge</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-accent-green font-bold text-lg" id="quizTimer">0/30</div>
+                        <div class="text-slate-600 dark:text-slate-400 text-sm">Questions Answered</div>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 mb-2">
+                    <div id="quizProgress" class="bg-accent-green h-3 rounded-full progress-bar" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                    <span id="currentQuestion">Question 1 of 30</span>
+                    <span id="questionsRemaining">29 remaining</span>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="premium-card p-6 mb-6">
+                <h3 id="questionText" class="text-xl font-bold dark:text-white text-slate-800 mb-6">Loading question...</h3>
+                
+                <!-- Options Container -->
+                <div class="space-y-4" id="optionsContainer">
+                    <!-- Options will be dynamically loaded here -->
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8 quiz-navigation">
+                    <div class="quiz-buttons-group">
+                        <button id="prevQuestion" class="px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition duration-200 w-full sm:w-auto">
+                            ← Previous Question
+                        </button>
+                        <button id="nextQuestion" class="px-6 py-3 bg-accent-green hover:bg-emerald-600 text-white rounded-lg transition duration-200 w-full sm:w-auto">
+                            Next Question →
+                        </button>
+                    </div>
+                    <button id="submitQuiz" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200 w-full sm:w-auto hidden">
+                        Submit Quiz
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="hidden">
+            <div class="premium-card p-8 text-center">
+                <!-- Score Circle -->
+                <div class="relative inline-block mb-6">
+                    <svg class="w-32 h-32 transform -rotate-90">
+                        <circle cx="64" cy="64" r="60" stroke="#d1d5db" stroke-width="8" fill="none" class="dark:stroke-slate-700"></circle>
+                        <circle id="scoreCircle" cx="64" cy="64" r="60" stroke="#10b981" stroke-width="8" 
+                                fill="none" stroke-dasharray="377" stroke-dashoffset="377">
+                        </circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="finalScore" class="text-3xl font-bold dark:text-white text-slate-800">0%</span>
+                        <span class="text-slate-600 dark:text-slate-400 text-sm">Score</span>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold dark:text-white text-slate-800 mb-2" id="resultsTitle">Quiz Completed!</h2>
+                <p class="text-slate-600 dark:text-slate-400 mb-6" id="resultsDescription">
+                    You have completed the quiz. Here's how you performed:
+                </p>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <div class="text-2xl font-bold text-accent-green" id="correctAnswers">0</div>
+                        <div class="text-slate-600 dark:text-slate-400 text-sm">Correct</div>
+                    </div>
+                    <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <div class="text-2xl font-bold text-red-400" id="wrongAnswers">0</div>
+                        <div class="text-slate-600 dark:text-slate-400 text-sm">Wrong</div>
+                    </div>
+                    <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <div class="text-2xl font-bold text-yellow-400" id="timeTaken">0:00</div>
+                        <div class="text-slate-600 dark:text-slate-400 text-sm">Time</div>
+                    </div>
+                    <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <div class="text-2xl font-bold text-blue-400" id="percentageScore">0%</div>
+                        <div class="text-slate-600 dark:text-slate-400 text-sm">Percentage</div>
+                    </div>
+                </div>
+
+                <!-- Performance Message -->
+                <div id="performanceMessage" class="mb-6 p-4 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <!-- Performance message will be shown here -->
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="restartQuiz()" class="px-6 py-3 bg-accent-green hover:bg-emerald-600 text-white rounded-lg transition duration-200">
+                        Take Quiz Again
+                    </button>
+                    <button onclick="showReview()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200">
+                        Review Answers
+                    </button>
+                    <button onclick="backToQuizzes()" class="px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition duration-200">
+                        Back to Courses
+                    </button>
+                </div>
+            </div>
+
+            <!-- Review Section -->
+            <div id="reviewSection" class="hidden mt-8">
+                <h3 class="text-2xl font-bold dark:text-white text-slate-800 mb-6">Question Review</h3>
+                <div id="questionsReview" class="space-y-6">
+                    <!-- Review questions will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-8 py-6 border-t dark:border-slate-800 border-slate-200 bg-white/5 dark:bg-bg-dark/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+                &copy; <span id="currentYear"></span> Passco Student Hub. Your comprehensive exam preparation platform.
+            </p>
+        </div>
+    </footer>
+
+   <!-- JavaScript -->
+<script>
+    // Quiz State Management
+    const quizState = {
+        currentProgram: '',
+        currentCourse: '',
+        questions: [],
+        currentQuestionIndex: 0,
+        userAnswers: [],
+        markedForReview: [],
+        startTime: null,
+        timerInterval: null,
+        timeRemaining: 0,
+        quizConfig: {
+            questionsCount: 20, // Changed to 20 questions per quiz
+            timeLimit: 0, // No time limit
+            passingScore: 60 // 60%
+        },
+        allQuestions: [], // Store all questions for the course
+        currentQuizQuestions: [], // Current set of 20 questions
+        correctAnswers: [], // Store correct answers for review
+        questionDetails: [] // Store question details for analytics
+    };
+
+    // Program images mapping (REAL programs from your database)
+    const programImages = {
+        'Computer Science': 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Information Technology': 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Electrical Engineering': 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Mechanical Engineering': 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Civil Engineering': 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Business Administration': 'https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Accounting': 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Marketing': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Software Engineering': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Cybersecurity': 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'General': 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+        'Fashion Design': 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80'
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set current year in footer
+        const currentYearElement = document.getElementById('currentYear');
+        if (currentYearElement) {
+            currentYearElement.textContent = new Date().getFullYear();
+        }
+        
+        // Theme Toggle Logic
+        const body = document.body.parentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const menuToggle = document.getElementById('menuToggle');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const profileDropdownButton = document.getElementById('profileDropdownButton');
+        const profileDropdown = document.getElementById('profileDropdown');
+        
+        let theme = localStorage.getItem('theme') || 'dark';
+        
+        const updateTheme = (newTheme) => {
+            body.classList.remove('light', 'dark');
+            body.classList.add(newTheme);
+            localStorage.setItem('theme', newTheme);
+            theme = newTheme;
+            
+            if (themeIcon) {
+                if (newTheme === 'dark') {
+                    themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>`;
+                    themeIcon.classList.remove('text-slate-700');
+                    themeIcon.classList.add('text-yellow-500');
+                } else {
+                    themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>`;
+                    themeIcon.classList.remove('text-yellow-500');
+                    themeIcon.classList.add('text-slate-700');
+                }
+            }
+        };
+        
+        updateTheme(theme);
+        
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const newTheme = theme === 'dark' ? 'light' : 'dark';
+                updateTheme(newTheme);
+            });
+        }
+
+        // Mobile Menu Toggle
+        if (menuToggle && mobileMenu) {
+            menuToggle.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            mobileMenu.querySelectorAll('.nav-item').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+        }
+
+        // Profile Dropdown Toggle
+        if (profileDropdownButton && profileDropdown) {
+            profileDropdownButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileDropdown.classList.toggle('show');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                profileDropdown.classList.remove('show');
+            });
+
+            // Prevent dropdown from closing when clicking inside
+            profileDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // Load user data
+        loadUserData();
+
+        // Initialize quiz app
+        initializeQuizApp();
+    });
+
+    // Load user data from Flask session
+    function loadUserData() {
+        const userInitials = document.getElementById('userInitials');
+        if (userInitials) {
+            // This will be populated by Flask template
+            {% if user and user.username %}
+                const userName = "{{ user.username }}";
+                const initials = getUserInitials(userName);
+                userInitials.textContent = initials;
+            {% else %}
+                userInitials.textContent = "GU";
+            {% endif %}
+        }
+    }
+
+    function getUserInitials(name) {
+        if (!name) return "GU";
+        return name.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 2);
+    }
+
+    // Logout function
+    window.logout = async function() {
+        try {
+            // Try Firebase logout first
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                await firebase.auth().signOut();
+            }
+            
+            // Then call your backend logout
+            const response = await fetch('/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (response.ok) {
+                window.location.href = '/auth/login';
+            } else {
+                // If backend logout fails, still redirect to login
+                window.location.href = '/auth/login';
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Fallback: redirect to login page
+            window.location.href = '/auth/login';
+        }
+    }
+
+    function initializeQuizApp() {
+        loadPrograms();
+        setupEventListeners();
+    }
+
+    async function loadPrograms() {
+        try {
+            // Show loading state
+            const loadingState = document.getElementById('loadingState');
+            const programNav = document.getElementById('programNav');
+            
+            if (loadingState) loadingState.classList.remove('hidden');
+            
+            console.log('🔄 Loading programs from database...');
+            
+            // Use the USER-ACCESSIBLE endpoint for quiz questions with adaptive learning
+            const response = await fetch('/admin/api/questions');
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch questions: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success || !data.questions || data.questions.length === 0) {
+                console.log('No questions found in database');
+                if (loadingState) loadingState.classList.add('hidden');
+                if (programNav) {
+                    programNav.innerHTML = `
+                        <div class="col-span-full text-center py-8">
+                            <div class="text-slate-600 dark:text-slate-400 mb-4">
+                                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">No quiz programs available</h3>
+                            <p class="text-slate-600 dark:text-slate-400">Please check back later or contact your administrator.</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            console.log(`✅ Found ${data.questions.length} questions in database`);
+            
+            // Filter active questions only
+            const activeQuestions = data.questions.filter(q => q.active !== false);
+            
+            if (activeQuestions.length === 0) {
+                console.log('No active questions found');
+                if (loadingState) loadingState.classList.add('hidden');
+                if (programNav) {
+                    programNav.innerHTML = `
+                        <div class="col-span-full text-center py-8">
+                            <div class="text-slate-600 dark:text-slate-400 mb-4">
+                                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">No active quizzes</h3>
+                            <p class="text-slate-600 dark:text-slate-400">All quizzes are currently inactive. Please check back later.</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // Extract UNIQUE programs from active questions
+            const programs = [...new Set(activeQuestions.map(q => q.program))].filter(Boolean).sort();
+            
+            console.log(`📊 Found ${programs.length} programs with quizzes:`, programs);
+            
+            if (programs.length === 0) {
+                console.log('No programs found in questions');
+                if (loadingState) loadingState.classList.add('hidden');
+                if (programNav) {
+                    programNav.innerHTML = `
+                        <div class="col-span-full text-center py-8">
+                            <div class="text-slate-600 dark:text-slate-400 mb-4">
+                                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">No quiz programs available</h3>
+                            <p class="text-slate-600 dark:text-slate-400">Please check back later or contact your administrator.</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // Store all active questions for later use
+            quizState.allQuestions = activeQuestions;
+            
+            // Render the actual programs from your database
+            renderPrograms(programs);
+            
+        } catch (error) {
+            console.error('❌ Error loading programs:', error);
+            const loadingState = document.getElementById('loadingState');
+            const programNav = document.getElementById('programNav');
+            
+            if (loadingState) loadingState.classList.add('hidden');
+            if (programNav) {
+                programNav.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <div class="text-red-400 mb-4">
+                            <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-red-400 mb-2">Error loading quizzes</h3>
+                        <p class="text-slate-600 dark:text-slate-400">Failed to load quiz data. Please try again later.</p>
+                        <button onclick="retryLoadPrograms()" class="mt-4 px-4 py-2 bg-accent-green hover:bg-emerald-600 text-white rounded-lg transition duration-200">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    function renderPrograms(programs) {
+        const programNav = document.getElementById('programNav');
+        const loadingState = document.getElementById('loadingState');
+        
+        if (!programNav) return;
+        
+        programNav.innerHTML = programs.map(program => {
+            // Count questions for this program
+            const programQuestions = quizState.allQuestions.filter(q => q.program === program);
+            const questionCount = programQuestions.length;
+            const coursesCount = [...new Set(programQuestions.map(q => q.course))].length;
+            
+            // Get appropriate image
+            const imageUrl = programImages[program] || 
+                           programImages[program.split(' ')[0]] || 
+                           'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80';
+            
+            // Escape single quotes in program name
+            const escapedProgram = program.replace(/'/g, "\\'");
+            
+            return `
+                <button class="program-card program-item" 
+                        onclick="selectProgram('${escapedProgram}')"
+                        title="${program}: ${questionCount} questions across ${coursesCount} courses">
+                    <img src="${imageUrl}" alt="${program}" class="program-card-image" 
+                         onerror="this.src='https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80'">
+                    <div class="program-card-overlay">
+                        <div>
+                            <h3 class="font-bold text-lg mb-1">${program}</h3>
+                            <p class="text-sm text-gray-300">
+                                ${questionCount} questions • ${coursesCount} courses
+                            </p>
+                        </div>
+                    </div>
+                </button>
+            `;
+        }).join('');
+
+        if (loadingState) loadingState.classList.add('hidden');
+    }
+
+    async function selectProgram(program) {
+        quizState.currentProgram = program;
+        
+        // Update active state
+        document.querySelectorAll('.program-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        // Find and activate clicked item
+        const clickedItem = event?.target?.closest('.program-item');
+        if (clickedItem) {
+            clickedItem.classList.add('active');
+        }
+        
+        // Show filter section
+        const filterSection = document.getElementById('filterSection');
+        if (filterSection) filterSection.classList.remove('hidden');
+        
+        await loadCoursesForProgram(program);
+    }
+
+    async function loadCoursesForProgram(program) {
+        try {
+            const loadingState = document.getElementById('loadingState');
+            if (loadingState) loadingState.classList.remove('hidden');
+            
+            // Filter questions for this program
+            const programQuestions = quizState.allQuestions.filter(question => 
+                question.program === program
+            );
+            
+            // Apply filters
+            const courseFilterElement = document.getElementById('filterCourse');
+            const levelFilterElement = document.getElementById('filterLevel');
+            const semesterFilterElement = document.getElementById('filterSemester');
+            const difficultyFilterElement = document.getElementById('filterDifficulty');
+            
+            const courseFilter = courseFilterElement ? courseFilterElement.value.toLowerCase() : '';
+            const levelFilter = levelFilterElement ? levelFilterElement.value : '';
+            const semesterFilter = semesterFilterElement ? semesterFilterElement.value : '';
+            const difficultyFilter = difficultyFilterElement ? difficultyFilterElement.value : '';
+            
+            let filteredQuestions = programQuestions;
+            
+            if (courseFilter) {
+                filteredQuestions = filteredQuestions.filter(question => 
+                    question.course.toLowerCase().includes(courseFilter)
+                );
+            }
+            if (levelFilter) {
+                filteredQuestions = filteredQuestions.filter(question => question.level === levelFilter);
+            }
+            if (semesterFilter) {
+                filteredQuestions = filteredQuestions.filter(question => question.semester === semesterFilter);
+            }
+            if (difficultyFilter) {
+                filteredQuestions = filteredQuestions.filter(question => question.difficulty === difficultyFilter);
+            }
+            
+            const courses = [...new Set(filteredQuestions.map(question => question.course))].sort();
+            
+            if (courses.length > 0) {
+                renderCourses(courses, program, filteredQuestions);
+            } else {
+                showNoCoursesForProgram(program);
+            }
+        } catch (error) {
+            console.error('Error loading courses:', error);
+            showNoCoursesForProgram(program);
+        }
+    }
+
+    function showNoCoursesForProgram(program) {
+        const loadingState = document.getElementById('loadingState');
+        const coursesSection = document.getElementById('coursesSection');
+        const coursesGrid = document.getElementById('coursesGrid');
+        
+        if (loadingState) loadingState.classList.add('hidden');
+        if (coursesSection) coursesSection.classList.remove('hidden');
+        if (coursesGrid) {
+            coursesGrid.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                    <div class="text-slate-600 dark:text-slate-400 mb-4">
+                        <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">No courses found for ${program}</h3>
+                    <p class="text-slate-600 dark:text-slate-400">Try adjusting your filters or search for a different course.</p>
+                    <button onclick="clearFilters()" class="mt-4 px-4 py-2 bg-accent-green hover:bg-emerald-600 text-white rounded-lg transition duration-200">
+                        Clear Filters
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    function renderCourses(courses, program, questions) {
+        const coursesGrid = document.getElementById('coursesGrid');
+        const selectedProgramTitle = document.getElementById('selectedProgramTitle');
+        const coursesSection = document.getElementById('coursesSection');
+        const loadingState = document.getElementById('loadingState');
+        
+        if (!coursesGrid) return;
+        
+        coursesGrid.innerHTML = courses.map(course => {
+            // Count questions for this course
+            const courseQuestions = questions.filter(q => q.course === course);
+            const questionCount = courseQuestions.length;
+            
+            // Count by difficulty
+            const easyCount = courseQuestions.filter(q => q.difficulty === 'easy').length;
+            const mediumCount = courseQuestions.filter(q => q.difficulty === 'medium').length;
+            const hardCount = courseQuestions.filter(q => q.difficulty === 'hard').length;
+            
+            // Get a random question to show as preview
+            const randomQuestion = courseQuestions[Math.floor(Math.random() * courseQuestions.length)];
+            const previewText = randomQuestion?.question?.substring(0, 100) || 'Practice quiz questions';
+            
+            // Escape special characters in course name for JavaScript
+            const escapedCourse = course.replace(/'/g, "\\'").replace(/"/g, '\\"');
+            const escapedProgram = program.replace(/'/g, "\\'");
+            
+            return `
+                <div class="course-card p-6 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition duration-300 cursor-pointer border-2 border-transparent"
+                     onclick="startQuiz('${escapedProgram}', '${escapedCourse}')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="text-3xl">📝</div>
+                        <div class="flex space-x-1">
+                            ${easyCount > 0 ? `<span class="px-2 py-1 text-xs bg-green-500 text-white rounded">${easyCount} Easy</span>` : ''}
+                            ${mediumCount > 0 ? `<span class="px-2 py-1 text-xs bg-yellow-500 text-white rounded">${mediumCount} Medium</span>` : ''}
+                            ${hardCount > 0 ? `<span class="px-2 py-1 text-xs bg-red-500 text-white rounded">${hardCount} Hard</span>` : ''}
+                        </div>
+                    </div>
+                    <h3 class="font-bold dark:text-white text-slate-800 text-lg mb-2">${course}</h3>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm mb-4">
+                        ${previewText}...
+                    </p>
+                    <div class="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400">
+                        <span>${questionCount} questions</span>
+                        <span class="bg-blue-500 text-white px-2 py-1 rounded">Start Quiz</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (selectedProgramTitle) selectedProgramTitle.textContent = `${program} - Available Quizzes`;
+        if (coursesSection) coursesSection.classList.remove('hidden');
+        if (loadingState) loadingState.classList.add('hidden');
+    }
+
+    async function startQuiz(program, course) {
+        quizState.currentProgram = program;
+        quizState.currentCourse = course;
+        
+        // Show loading state
+        const quizHomeScreen = document.getElementById('quizHomeScreen');
+        const quizScreen = document.getElementById('quizScreen');
+        
+        if (quizHomeScreen) quizHomeScreen.classList.add('hidden');
+        if (quizScreen) quizScreen.classList.remove('hidden');
+        
+        // Update quiz title
+        const quizCourseTitle = document.getElementById('quizCourseTitle');
+        const quizDescription = document.getElementById('quizDescription');
+        
+        if (quizCourseTitle) quizCourseTitle.textContent = `Quiz: ${course}`;
+        if (quizDescription) quizDescription.textContent = `${program} - Test your knowledge`;
+        
+        // Initialize quiz state
+        quizState.currentQuestionIndex = 0;
+        quizState.userAnswers = [];
+        quizState.markedForReview = [];
+        quizState.startTime = Date.now();
+        quizState.timeRemaining = 0; // No timer
+        quizState.correctAnswers = []; // Reset correct answers
+        quizState.questionDetails = []; // Reset question details
+        
+        // Update answered questions display
+        updateAnsweredDisplay();
+        
+        // Load questions for this course
+        await loadQuizQuestions(program, course);
+        
+        displayCurrentQuestion();
+    }
+
+    async function loadQuizQuestions(program, course) {
+        try {
+            console.log('📡 Loading quiz questions for:', program, course);
+            
+            // Get all available filters
+            const levelFilterElement = document.getElementById('filterLevel');
+            const semesterFilterElement = document.getElementById('filterSemester');
+            const difficultyFilterElement = document.getElementById('filterDifficulty');
+            
+            const levelFilter = levelFilterElement ? levelFilterElement.value : '';
+            const semesterFilter = semesterFilterElement ? semesterFilterElement.value : '';
+            const difficultyFilter = difficultyFilterElement ? difficultyFilterElement.value : '';
+            
+            // Build query parameters for adaptive learning API
+            const params = new URLSearchParams({
+                program: program,
+                course: course,
+                count: quizState.quizConfig.questionsCount
+            });
+            
+            if (levelFilter) params.append('level', levelFilter);
+            if (semesterFilter) params.append('semester', semesterFilter);
+            if (difficultyFilter) params.append('difficulty', difficultyFilter);
+            
+            // Use the adaptive learning API endpoint
+            const response = await fetch(`/api/quiz/questions?${params}`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch questions: ${response.status}`);
+            }
+            
+            const questions = await response.json();
+            
+            console.log(`✅ Found ${questions.length} questions for ${course}`);
+            
+            if (questions.length === 0) {
+                throw new Error('No questions found for this course with the current filters');
+            }
+            
+            // Store questions
+            quizState.currentQuizQuestions = questions;
+            
+            // We need to get the correct answers for these questions from the cached list
+            // This is necessary for calculating results
+            quizState.questionDetails = questions.map(q => {
+                const fullQuestion = quizState.allQuestions.find(aq => aq.id === q.id);
+                return {
+                    id: q.id,
+                    question: q.question,
+                    options: q.options,
+                    correctAnswer: fullQuestion ? fullQuestion.correctAnswer : null,
+                    topic: q.topic || 'General',
+                    difficulty: q.difficulty || 'medium'
+                };
+            });
+            
+        } catch (error) {
+            console.error('❌ Error loading questions:', error);
+            
+            // Fallback: Use the old method if adaptive API fails
+            console.log('⚠️ Falling back to non-adaptive question loading');
+            
+            // Get filter values for fallback
+            const levelFilterElement = document.getElementById('filterLevel');
+            const semesterFilterElement = document.getElementById('filterSemester');
+            const difficultyFilterElement = document.getElementById('filterDifficulty');
+            
+            const levelFilter = levelFilterElement ? levelFilterElement.value : '';
+            const semesterFilter = semesterFilterElement ? semesterFilterElement.value : '';
+            const difficultyFilter = difficultyFilterElement ? difficultyFilterElement.value : '';
+            
+            // Filter questions from our cached list
+            let courseQuestions = quizState.allQuestions.filter(q => 
+                q.program === program && 
+                q.course === course &&
+                q.active !== false
+            );
+            
+            // Apply current filters
+            if (levelFilter) {
+                courseQuestions = courseQuestions.filter(q => q.level === levelFilter);
+            }
+            if (semesterFilter) {
+                courseQuestions = courseQuestions.filter(q => q.semester === semesterFilter);
+            }
+            if (difficultyFilter) {
+                courseQuestions = courseQuestions.filter(q => q.difficulty === difficultyFilter);
+            }
+            
+            if (courseQuestions.length === 0) {
+                alert(`Failed to load questions: ${error.message}. Please make sure questions exist for this course with the selected filters.`);
+                backToQuizzes();
+                return;
+            }
+            
+            // Store questions
+            quizState.currentQuizQuestions = courseQuestions;
+            
+            // Store question details for analytics
+            quizState.questionDetails = courseQuestions.map(q => ({
+                id: q.id,
+                question: q.question,
+                options: q.options,
+                correctAnswer: q.correctAnswer,
+                topic: q.topic || 'General',
+                difficulty: q.difficulty || 'medium'
+            }));
+            
+            // Select up to 20 random questions (changed from 30)
+            selectRandomQuestions();
+        }
+    }
+
+    function selectRandomQuestions() {
+        // If we have less than 20 questions, use all of them
+        if (quizState.currentQuizQuestions.length <= quizState.quizConfig.questionsCount) {
+            quizState.currentQuizQuestions = shuffleArray([...quizState.currentQuizQuestions]);
+        } else {
+            // Select random questions
+            quizState.currentQuizQuestions = shuffleArray([...quizState.currentQuizQuestions]).slice(0, quizState.quizConfig.questionsCount);
+        }
+        
+        console.log(`Selected ${quizState.currentQuizQuestions.length} questions for quiz`);
+    }
+
+    function shuffleArray(array) {
+        const newArray = [...array];
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+    }
+
+    function displayCurrentQuestion() {
+        const question = quizState.currentQuizQuestions[quizState.currentQuestionIndex];
+        if (!question) return;
+
+        // Update question text
+        const questionText = document.getElementById('questionText');
+        if (questionText) questionText.textContent = question.question;
+        
+        // Update progress
+        const progress = ((quizState.currentQuestionIndex + 1) / quizState.currentQuizQuestions.length) * 100;
+        const quizProgress = document.getElementById('quizProgress');
+        if (quizProgress) quizProgress.style.width = `${progress}%`;
+        
+        const currentQuestion = document.getElementById('currentQuestion');
+        const questionsRemaining = document.getElementById('questionsRemaining');
+        
+        if (currentQuestion) {
+            currentQuestion.textContent = 
+                `Question ${quizState.currentQuestionIndex + 1} of ${quizState.currentQuizQuestions.length}`;
+        }
+        
+        if (questionsRemaining) {
+            questionsRemaining.textContent = 
+                `${quizState.currentQuizQuestions.length - quizState.currentQuestionIndex - 1} remaining`;
+        }
+
+        // Render options
+        const optionsContainer = document.getElementById('optionsContainer');
+        if (optionsContainer) {
+            optionsContainer.innerHTML = question.options.map((option, index) => {
+                const isSelected = quizState.userAnswers[quizState.currentQuestionIndex] === index;
+                
+                return `
+                    <div class="quiz-option p-4 rounded-lg bg-slate-100 dark:bg-slate-800 cursor-pointer transition duration-200 border-2 ${isSelected ? 'selected border-accent-green' : 'border-transparent'}"
+                         onclick="selectOption(${index})"
+                         data-option="${index}">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center mr-4 font-bold dark:text-white text-slate-800">
+                                ${String.fromCharCode(65 + index)}
+                            </div>
+                            <span class="dark:text-white text-slate-800 flex-1">${option}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update navigation buttons
+        updateNavigationButtons();
+    }
+
+    function selectOption(optionIndex) {
+        // Remove previous selections
+        document.querySelectorAll('.quiz-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+
+        // Select new option
+        const selectedOption = document.querySelector(`[data-option="${optionIndex}"]`);
+        if (selectedOption) {
+            selectedOption.classList.add('selected');
+        }
+
+        // Store user's answer
+        quizState.userAnswers[quizState.currentQuestionIndex] = optionIndex;
+        
+        // Update answered count display
+        updateAnsweredDisplay();
+        
+        // Enable next button
+        updateNavigationButtons();
+    }
+
+    function updateNavigationButtons() {
+        const prevBtn = document.getElementById('prevQuestion');
+        const nextBtn = document.getElementById('nextQuestion');
+        const submitBtn = document.getElementById('submitQuiz');
+
+        // Show/hide previous button
+        if (prevBtn) {
+            prevBtn.classList.toggle('hidden', quizState.currentQuestionIndex === 0);
+        }
+
+        // Show submit button on last question, next button otherwise
+        const isLastQuestion = quizState.currentQuestionIndex === quizState.currentQuizQuestions.length - 1;
+        
+        if (nextBtn) {
+            nextBtn.classList.toggle('hidden', isLastQuestion);
+        }
+        
+        if (submitBtn) {
+            submitBtn.classList.toggle('hidden', !isLastQuestion);
+        }
+
+        // Enable/disable next button based on answer selection
+        const hasAnswer = quizState.userAnswers[quizState.currentQuestionIndex] !== undefined;
+        
+        if (nextBtn) {
+            nextBtn.disabled = !hasAnswer;
+            if (nextBtn.disabled) {
+                nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+        
+        if (submitBtn) {
+            submitBtn.disabled = !hasAnswer;
+            if (submitBtn.disabled) {
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    }
+
+    function nextQuestion() {
+        const hasAnswer = quizState.userAnswers[quizState.currentQuestionIndex] !== undefined;
+        if (!hasAnswer) {
+            alert('Please select an answer before moving to the next question.');
+            return;
+        }
+        
+        if (quizState.currentQuestionIndex < quizState.currentQuizQuestions.length - 1) {
+            quizState.currentQuestionIndex++;
+            displayCurrentQuestion();
+        }
+    }
+
+    function previousQuestion() {
+        if (quizState.currentQuestionIndex > 0) {
+            quizState.currentQuestionIndex--;
+            displayCurrentQuestion();
+        }
+    }
+
+    async function submitQuiz() {
+        const hasAnswer = quizState.userAnswers[quizState.currentQuestionIndex] !== undefined;
+        if (!hasAnswer) {
+            alert('Please select an answer before submitting the quiz.');
+            return;
+        }
+        
+        const results = calculateResults();
+        await saveQuizResults(results); // Save results to analytics
+        showResults(results);
+    }
+
+    function calculateResults() {
+        let correctCount = 0;
+        const answers = [];
+        
+        quizState.userAnswers.forEach((userAnswer, index) => {
+            const questionDetail = quizState.questionDetails[index];
+            const isCorrect = userAnswer === questionDetail.correctAnswer;
+            
+            if (isCorrect) {
+                correctCount++;
+            }
+            
+            answers.push({
+                question_id: questionDetail.id,
+                user_answer: userAnswer,
+                correct_answer: questionDetail.correctAnswer,
+                is_correct: isCorrect,
+                topic: questionDetail.topic,
+                difficulty: questionDetail.difficulty
+            });
+        });
+        
+        const answeredCount = quizState.userAnswers.filter(answer => answer !== undefined).length;
+        const timeTaken = Math.floor((Date.now() - quizState.startTime) / 1000);
+        const percentage = Math.round((correctCount / quizState.currentQuizQuestions.length) * 100);
+        
+        return {
+            correctCount,
+            answeredCount,
+            totalQuestions: quizState.currentQuizQuestions.length,
+            timeTaken: timeTaken,
+            timeFormatted: formatTime(timeTaken),
+            percentage,
+            answers: answers
+        };
+    }
+
+    async function saveQuizResults(results) {
+        try {
+            // Get current filters
+            const levelFilterElement = document.getElementById('filterLevel');
+            const semesterFilterElement = document.getElementById('filterSemester');
+            const difficultyFilterElement = document.getElementById('filterDifficulty');
+            
+            const levelFilter = levelFilterElement ? levelFilterElement.value : '';
+            const semesterFilter = semesterFilterElement ? semesterFilterElement.value : '';
+            const difficultyFilter = difficultyFilterElement ? difficultyFilterElement.value : '';
+            
+            // Prepare quiz result data for analytics
+            const quizResult = {
+                program: quizState.currentProgram,
+                course: quizState.currentCourse,
+                level: levelFilter || 'Not specified',
+                semester: semesterFilter || 'Not specified',
+                score: results.percentage,
+                total_questions: results.totalQuestions,
+                correct_answers: results.correctCount,
+                answers: results.answers,
+                time_taken: results.timeTaken,
+                difficulty: difficultyFilter || 'mixed'
+            };
+            
+            console.log('📊 Submitting quiz results for analytics:', quizResult);
+            
+            // Submit to analytics backend
+            const response = await fetch('/api/submit-quiz-results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(quizResult)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                console.log('✅ Quiz results saved to analytics:', data.message);
+                if (data.incorrect_count > 0) {
+                    console.log(`📝 ${data.incorrect_count} questions will be included in your next quiz for practice`);
+                }
+            } else {
+                console.warn('⚠️ Failed to save quiz results to analytics:', data.message);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error saving quiz results to analytics:', error);
+            // Don't show error to user - analytics failure shouldn't break the quiz
+        }
+    }
+
+    function showResults(results) {
+        // Update results display
+        const finalScore = document.getElementById('finalScore');
+        const correctAnswers = document.getElementById('correctAnswers');
+        const wrongAnswers = document.getElementById('wrongAnswers');
+        const timeTaken = document.getElementById('timeTaken');
+        const percentageScore = document.getElementById('percentageScore');
+        const resultsTitle = document.getElementById('resultsTitle');
+        const performanceMessage = document.getElementById('performanceMessage');
+        const quizScreen = document.getElementById('quizScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+        
+        if (finalScore) finalScore.textContent = `${results.percentage}%`;
+        if (correctAnswers) correctAnswers.textContent = results.correctCount;
+        if (wrongAnswers) wrongAnswers.textContent = results.totalQuestions - results.correctCount;
+        if (timeTaken) timeTaken.textContent = results.timeFormatted;
+        if (percentageScore) percentageScore.textContent = `${results.percentage}%`;
+        
+        // Animate score circle
+        const circle = document.getElementById('scoreCircle');
+        if (circle) {
+            const circumference = 377;
+            const percentage = results.correctCount / results.totalQuestions;
+            const offset = circumference - (percentage * circumference);
+            setTimeout(() => {
+                circle.style.strokeDashoffset = offset;
+            }, 100);
+        }
+        
+        // Update title and performance message
+        if (resultsTitle) resultsTitle.textContent = 'Quiz Completed!';
+        
+        if (performanceMessage) {
+            let performanceText = '';
+            if (results.percentage >= 80) {
+                performanceText = '<p class="text-accent-green font-semibold">🎉 Excellent work! You have a strong understanding of this material.</p>';
+            } else if (results.percentage >= 60) {
+                performanceText = '<p class="text-yellow-400 font-semibold">👍 Good job! You passed the quiz.</p>';
+            } else {
+                performanceText = '<p class="text-red-400 font-semibold">📚 Keep practicing! Review the material and try again.</p>';
+            }
+            
+            performanceMessage.innerHTML = `
+                ${performanceText}
+                <p class="dark:text-white text-slate-800 mt-2">
+                    You answered ${results.correctCount} out of ${results.totalQuestions} questions correctly.
+                </p>
+                <p class="text-slate-600 dark:text-slate-400 text-sm mt-2">
+                    Your results have been saved to your analytics dashboard.
+                </p>
+            `;
+        }
+        
+        // Show results screen
+        if (quizScreen) quizScreen.classList.add('hidden');
+        if (resultsScreen) resultsScreen.classList.remove('hidden');
+    }
+
+    function updateAnsweredDisplay() {
+        const answeredCount = quizState.userAnswers.filter(answer => answer !== undefined).length;
+        const quizTimer = document.getElementById('quizTimer');
+        if (quizTimer) quizTimer.textContent = `${answeredCount}/${quizState.currentQuizQuestions.length}`;
+    }
+
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function restartQuiz() {
+        // Reset quiz state properly
+        quizState.currentQuestionIndex = 0;
+        quizState.userAnswers = [];
+        quizState.markedForReview = [];
+        quizState.startTime = Date.now();
+        quizState.questionDetails = [];
+        
+        // Select new random questions (will include previous incorrect ones via adaptive API)
+        selectRandomQuestions();
+        
+        // Hide results and show quiz screen
+        const resultsScreen = document.getElementById('resultsScreen');
+        const reviewSection = document.getElementById('reviewSection');
+        const quizScreen = document.getElementById('quizScreen');
+        
+        if (resultsScreen) resultsScreen.classList.add('hidden');
+        if (reviewSection) reviewSection.classList.add('hidden');
+        if (quizScreen) quizScreen.classList.remove('hidden');
+        
+        // Update answered display and display first question
+        updateAnsweredDisplay();
+        displayCurrentQuestion();
+    }
+
+    function showReview() {
+        const reviewSection = document.getElementById('reviewSection');
+        const questionsReview = document.getElementById('questionsReview');
+        
+        if (!reviewSection || !questionsReview) return;
+        
+        questionsReview.innerHTML = quizState.currentQuizQuestions.map((question, index) => {
+            const userAnswer = quizState.userAnswers[index];
+            const questionDetail = quizState.questionDetails[index];
+            const correctAnswer = questionDetail ? questionDetail.correctAnswer : null;
+            const isAnswered = userAnswer !== undefined;
+            const isCorrect = userAnswer === correctAnswer;
+            
+            return `
+                <div class="bg-slate-100 dark:bg-slate-800 p-6 rounded-lg border ${isCorrect ? 'border-green-500' : isAnswered ? 'border-red-500' : 'border-yellow-500'}">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                        <h4 class="font-bold dark:text-white text-slate-800 text-lg">Question ${index + 1}</h4>
+                        <div class="flex gap-2">
+                            <span class="px-2 py-1 rounded text-xs ${isCorrect ? 'bg-green-500 text-white' : isAnswered ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'}">
+                                ${isCorrect ? 'Correct' : isAnswered ? 'Incorrect' : 'Not Answered'}
+                            </span>
+                        </div>
+                    </div>
+                    <p class="dark:text-white text-slate-800 mb-4">${question.question}</p>
+                    <div class="space-y-2 mb-4">
+                        ${question.options.map((option, optIndex) => {
+                            let bgColor = 'bg-slate-200 dark:bg-slate-700';
+                            let textColor = 'dark:text-white text-slate-800';
+                            let borderColor = 'border-transparent';
+                            let className = 'review-option-default';
+                            
+                            // Highlight correct answer
+                            if (optIndex === correctAnswer) {
+                                bgColor = 'dark:bg-green-500';
+                                textColor = 'dark:text-white text-slate-800';
+                                borderColor = 'border-green-500';
+                                className = 'review-option-correct';
+                            }
+                            // Highlight user's selected answer if incorrect
+                            else if (optIndex === userAnswer && userAnswer !== correctAnswer) {
+                                bgColor = 'dark:bg-red-500';
+                                textColor = 'dark:text-white text-slate-800';
+                                borderColor = 'border-red-500';
+                                className = 'review-option-incorrect';
+                            }
+                            // Highlight user's selected answer if correct
+                            else if (optIndex === userAnswer) {
+                                bgColor = 'dark:bg-green-500';
+                                textColor = 'dark:text-white text-slate-800';
+                                borderColor = 'border-green-500';
+                                className = 'review-option-correct';
+                            }
+                            
+                            return `
+                                <div class="p-3 rounded border ${borderColor} ${bgColor} ${textColor} ${className}">
+                                    <strong>${String.fromCharCode(65 + optIndex)}.</strong> ${option}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    ${question.explanation ? `
+                        <div class="mt-3 p-3 bg-blue-500 text-white rounded">
+                            <strong>Explanation:</strong> ${question.explanation}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+        
+        reviewSection.classList.remove('hidden');
+        
+        // Scroll to review section
+        reviewSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function backToQuizzes() {
+        const resultsScreen = document.getElementById('resultsScreen');
+        const reviewSection = document.getElementById('reviewSection');
+        const quizHomeScreen = document.getElementById('quizHomeScreen');
+        
+        if (resultsScreen) resultsScreen.classList.add('hidden');
+        if (reviewSection) reviewSection.classList.add('hidden');
+        if (quizHomeScreen) quizHomeScreen.classList.remove('hidden');
+    }
+
+    function backToPrograms() {
+        const coursesSection = document.getElementById('coursesSection');
+        const filterSection = document.getElementById('filterSection');
+        
+        if (coursesSection) coursesSection.classList.add('hidden');
+        if (filterSection) filterSection.classList.add('hidden');
+    }
+
+    function applyFilters() {
+        if (quizState.currentProgram) {
+            loadCoursesForProgram(quizState.currentProgram);
+        }
+    }
+
+    function clearFilters() {
+        const filterCourse = document.getElementById('filterCourse');
+        const filterLevel = document.getElementById('filterLevel');
+        const filterSemester = document.getElementById('filterSemester');
+        const filterDifficulty = document.getElementById('filterDifficulty');
+        
+        if (filterCourse) filterCourse.value = '';
+        if (filterLevel) filterLevel.value = '';
+        if (filterSemester) filterSemester.value = '';
+        if (filterDifficulty) filterDifficulty.value = '';
+        
+        if (quizState.currentProgram) {
+            loadCoursesForProgram(quizState.currentProgram);
+        }
+    }
+
+    function setupEventListeners() {
+        const nextQuestionBtn = document.getElementById('nextQuestion');
+        const prevQuestionBtn = document.getElementById('prevQuestion');
+        const submitQuizBtn = document.getElementById('submitQuiz');
+        const filterCourse = document.getElementById('filterCourse');
+        const filterLevel = document.getElementById('filterLevel');
+        const filterSemester = document.getElementById('filterSemester');
+        const filterDifficulty = document.getElementById('filterDifficulty');
+        
+        if (nextQuestionBtn) nextQuestionBtn.addEventListener('click', nextQuestion);
+        if (prevQuestionBtn) prevQuestionBtn.addEventListener('click', previousQuestion);
+        if (submitQuizBtn) submitQuizBtn.addEventListener('click', submitQuiz);
+        
+        // Filter input listeners
+        if (filterCourse) filterCourse.addEventListener('input', applyFilters);
+        if (filterLevel) filterLevel.addEventListener('change', applyFilters);
+        if (filterSemester) filterSemester.addEventListener('change', applyFilters);
+        if (filterDifficulty) filterDifficulty.addEventListener('change', applyFilters);
+    }
+
+    // Make functions globally available for HTML onclick
+    window.selectProgram = selectProgram;
+    window.startQuiz = startQuiz;
+    window.selectOption = selectOption;
+    window.restartQuiz = restartQuiz;
+    window.showReview = showReview;
+    window.backToQuizzes = backToQuizzes;
+    window.backToPrograms = backToPrograms;
+    window.applyFilters = applyFilters;
+    window.clearFilters = clearFilters;
+    window.retryLoadPrograms = loadPrograms; // Add retry function
+</script>
+</body>
+</html>

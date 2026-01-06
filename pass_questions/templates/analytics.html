@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard | Passco Student Hub</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for analytics charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'accent-green': '#10b981',
+                        'bg-dark': '#0f172a',
+                        'bg-light': '#f1f5f9',
+                        'card-dark': '#1e293b',
+                        'card-light': '#ffffff',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'header-glow': '0 4px 15px rgba(0, 0, 0, 0.2)',
+                        'card-shadow': '0 10px 30px rgba(0, 0, 0, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .dark {
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+        }
+
+        .light {
+            color: #1e293b;
+        }
+
+        /* Custom Card Style for Premium Look */
+        .premium-card {
+            background-color: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .light .premium-card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .premium-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .light .premium-card:hover {
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Profile dropdown */
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+            z-index: 40;
+        }
+
+        .dark .profile-dropdown {
+            background: #1e293b;
+            border-color: #374151;
+        }
+
+        .profile-dropdown.show {
+            display: block;
+        }
+
+        /* User initials avatar */
+        .user-initials {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* Text color fixes for light mode */
+        .light .text-white {
+            color: #1e293b !important;
+        }
+        
+        .light .text-slate-300,
+        .light .text-slate-400 {
+            color: #64748b !important;
+        }
+
+        .light .bg-card-dark {
+            background-color: #ffffff !important;
+        }
+
+        /* Animation for loading */
+        .loading-spinner {
+            border: 3px solid rgba(16, 185, 129, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #10b981;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Progress bars */
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+
+        /* Performance indicators */
+        .performance-indicator {
+            position: relative;
+        }
+
+        .performance-indicator::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+        }
+
+        .performance-up::after {
+            border-bottom: 5px solid #10b981;
+        }
+
+        .performance-down::after {
+            border-top: 5px solid #ef4444;
+        }
+
+        .performance-neutral::after {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark flex flex-col min-h-screen">
+
+    <!-- Header and Navigation -->
+    <header class="sticky top-0 z-30 bg-white/70 dark:bg-bg-dark/70 backdrop-blur-xl border-b dark:border-slate-800 shadow-header-glow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Logo Image Only -->
+            <a href="/dashboard">
+                <img 
+                    src="/static/images/logo.png" 
+                    alt="PASSCO Logo" 
+                    class="h-8 w-auto md:h-10 w-auto object-contain"
+                    onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50/10B981/FFFFFF?text=PASSCO'"
+                >
+            </a>
+
+            <!-- Desktop Navigation -->
+            <nav class="hidden lg:flex space-x-6 items-center">
+                <a href="/dashboard" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Dashboard/Home</a>
+                <a href="/questions" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Questions</a>
+                <a href="/quiz" class="nav-item text-slate-500 dark:text-slate-300 hover:text-accent-green hover:dark:text-accent-green transition duration-200 font-medium">Quiz</a>
+                <a href="/analytics" class="nav-item text-accent-green dark:text-accent-green transition duration-200 font-medium border-b-2 border-accent-green">Analytics</a>
+            </nav>
+
+            <!-- Mobile Menu, Theme Toggle, and Profile Container -->
+            <div class="flex items-center space-x-3">
+                <!-- Profile Dropdown -->
+                <div class="relative">
+                    <button id="profileDropdownButton" class="block p-0.5 rounded-full ring-2 ring-accent-green/70 hover:ring-accent-green transition duration-200" title="Profile">
+                        <div id="userInitials" class="user-initials">
+                            <!-- User initials will be dynamically set -->
+                        </div>
+                    </button>
+                    
+                    <!-- Profile Dropdown Menu -->
+                    <div id="profileDropdown" class="profile-dropdown">
+                        <div class="p-4 border-b dark:border-gray-600">
+                            {% if user and user.username %}
+                                <p class="font-medium text-gray-900 dark:text-white" id="dropdownUserName">
+                                    {{ user.username }}
+                                </p>
+                            {% else %}
+                                <p class="font-medium text-gray-900 dark:text-white" id="dropdownUserName">
+                                    Welcome!
+                                </p>
+                            {% endif %}
+                            
+                            {% if user and user.email %}
+                                <p class="text-sm text-gray-500 dark:text-gray-400" id="dropdownUserEmail">
+                                    {{ user.email }}
+                                </p>
+                            {% else %}
+                                <p class="text-sm text-gray-500 dark:text-gray-400" id="dropdownUserEmail">
+                                    student@example.com
+                                </p>
+                            {% endif %}
+                        </div>
+                        <div class="p-2">
+                            {% if user and user.uid %}
+                                <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition duration-200 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                    <span>My Profile</span>
+                                </a>
+                                <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition duration-200 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    <span>Settings</span>
+                                </a>
+                                <button onclick="logout()" class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition duration-200 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                    </svg>
+                                    <span>Logout</span>
+                                </button>
+                            {% else %}
+                                <a href="/auth/login" class="block px-4 py-2 text-sm text-accent-green hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition duration-200 flex items-center space-x-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                                    </svg>
+                                    <span>Login</span>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Theme Toggle Button -->
+                <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-card-dark transition duration-200">
+                    <svg id="themeIcon" class="w-6 h-6 text-yellow-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+
+                <!-- Mobile Menu Button -->
+                <button id="menuToggle" class="p-2 rounded-lg lg:hidden hover:bg-gray-100 dark:hover:bg-card-dark transition duration-200">
+                    <svg class="w-6 h-6 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <nav id="mobileMenu" class="lg:hidden hidden px-4 pb-4 border-t dark:border-slate-800">
+            <div class="flex flex-col space-y-1 mt-2">
+                <a href="/dashboard" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="/questions" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span>Questions</span>
+                </a>
+                <a href="/quiz" class="nav-item w-full p-3 rounded-lg dark:text-white text-slate-800 hover:bg-accent-green/10 font-medium flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <span>Quiz</span>
+                </a>
+                <a href="/analytics" class="nav-item w-full p-3 rounded-lg bg-accent-green/20 dark:text-white text-slate-800 font-bold flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span>Analytics</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4 sm:p-8">
+        
+        <!-- Analytics Dashboard -->
+        <div id="analyticsDashboard">
+            <!-- Page Header -->
+            <div class="bg-gradient-to-r from-accent-green/10 to-transparent p-6 sm:p-8 rounded-xl mb-8 border border-accent-green/30 shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 class="text-3xl sm:text-4xl font-extrabold dark:text-white text-slate-800 tracking-tight mb-2">
+                            Analytics Dashboard
+                        </h1>
+                        <p class="text-slate-600 dark:text-slate-400 text-lg">
+                            Track your progress, identify strengths, and improve weaknesses
+                        </p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="relative">
+                            <select id="timeRange" class="bg-white dark:bg-card-dark border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white px-4 py-2 rounded-lg appearance-none cursor-pointer pr-8">
+                                <option value="week">Past Week</option>
+                                <option value="month" selected>Past Month</option>
+                                <option value="year">Past Year</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <button onclick="refreshAnalytics()" class="px-4 py-2 bg-accent-green hover:bg-emerald-600 text-white rounded-lg transition duration-200 flex items-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-slate-600 dark:text-slate-400">Loading your analytics data...</p>
+            </div>
+
+            <!-- Analytics Content (hidden until loaded) -->
+            <div id="analyticsContent" class="hidden">
+                <!-- Quick Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Total Quizzes Card -->
+                    <div class="premium-card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-blue-500/20 rounded-lg">
+                                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
+                            </div>
+                            <span id="performanceTrend" class="performance-indicator performance-up text-green-500 text-sm font-medium">+5.2%</span>
+                        </div>
+                        <h3 class="text-2xl font-bold dark:text-white text-slate-800 mb-2" id="totalQuizzes">0</h3>
+                        <p class="text-slate-600 dark:text-slate-400">Total Quizzes Taken</p>
+                    </div>
+
+                    <!-- Average Score Card -->
+                    <div class="premium-card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-green-500/20 rounded-lg">
+                                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <span class="text-accent-green text-sm font-medium" id="avgScore">0%</span>
+                        </div>
+                        <h3 class="text-2xl font-bold dark:text-white text-slate-800 mb-2" id="averageScore">0%</h3>
+                        <p class="text-slate-600 dark:text-slate-400">Average Score</p>
+                    </div>
+
+                    <!-- Accuracy Rate Card -->
+                    <div class="premium-card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-purple-500/20 rounded-lg">
+                                <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                            </div>
+                            <span class="text-purple-500 text-sm font-medium" id="accuracyRate">0%</span>
+                        </div>
+                        <h3 class="text-2xl font-bold dark:text-white text-slate-800 mb-2" id="accuracy">0%</h3>
+                        <p class="text-slate-600 dark:text-slate-400">Accuracy Rate</p>
+                    </div>
+
+                    <!-- Time Spent Card -->
+                    <div class="premium-card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-yellow-500/20 rounded-lg">
+                                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <span class="text-yellow-500 text-sm font-medium" id="totalTime">0h</span>
+                        </div>
+                        <h3 class="text-2xl font-bold dark:text-white text-slate-800 mb-2" id="timeSpent">0h</h3>
+                        <p class="text-slate-600 dark:text-slate-400">Total Time Spent</p>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Performance Trend Chart -->
+                    <div class="premium-card p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold dark:text-white text-slate-800">Performance Trend</h3>
+                            <div class="flex space-x-2">
+                                <button onclick="updateChartRange('week')" class="px-3 py-1 text-sm rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition duration-200">Week</button>
+                                <button onclick="updateChartRange('month')" class="px-3 py-1 text-sm rounded-lg bg-accent-green text-white transition duration-200">Month</button>
+                                <button onclick="updateChartRange('year')" class="px-3 py-1 text-sm rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition duration-200">Year</button>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Score Distribution Chart -->
+                    <div class="premium-card p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold dark:text-white text-slate-800">Score Distribution</h3>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strength & Weakness Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Strength Areas -->
+                    <div class="premium-card p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold dark:text-white text-slate-800">Your Strengths</h3>
+                            <span class="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-sm font-medium" id="strengthCount">0 areas</span>
+                        </div>
+                        <div id="strengthList" class="space-y-4">
+                            <!-- Strengths will be loaded here -->
+                            <div class="text-center py-8">
+                                <div class="loading-spinner mx-auto mb-4"></div>
+                                <p class="text-slate-600 dark:text-slate-400">Loading strengths...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weakness Areas -->
+                    <div class="premium-card p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold dark:text-white text-slate-800">Areas for Improvement</h3>
+                            <span class="px-3 py-1 bg-red-500/20 text-red-500 rounded-full text-sm font-medium" id="weaknessCount">0 areas</span>
+                        </div>
+                        <div id="weaknessList" class="space-y-4">
+                            <!-- Weaknesses will be loaded here -->
+                            <div class="text-center py-8">
+                                <div class="loading-spinner mx-auto mb-4"></div>
+                                <p class="text-slate-600 dark:text-slate-400">Loading weaknesses...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity & Recommendations -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Recent Activity -->
+                    <div class="premium-card p-6 lg:col-span-2">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold dark:text-white text-slate-800">Recent Quiz Activity</h3>
+                            <a href="/quiz" class="text-accent-green hover:text-emerald-600 text-sm font-medium flex items-center space-x-1">
+                                <span>View All</span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </a>
+                        </div>
+                        <div id="recentActivity" class="space-y-4">
+                            <!-- Recent activity will be loaded here -->
+                            <div class="text-center py-8">
+                                <div class="loading-spinner mx-auto mb-4"></div>
+                                <p class="text-slate-600 dark:text-slate-400">Loading recent activity...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personalized Recommendations -->
+                    <div class="premium-card p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-bold dark:text-white text-slate-800">Recommendations</h3>
+                            <span class="px-3 py-1 bg-blue-500/20 text-blue-500 rounded-full text-sm font-medium" id="recommendationCount">3 tips</span>
+                        </div>
+                        <div id="recommendationsList" class="space-y-4">
+                            <!-- Recommendations will be loaded here -->
+                            <div class="text-center py-8">
+                                <div class="loading-spinner mx-auto mb-4"></div>
+                                <p class="text-slate-600 dark:text-slate-400">Loading recommendations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Program Breakdown -->
+                <div class="premium-card p-6 mt-8">
+                    <h3 class="text-xl font-bold dark:text-white text-slate-800 mb-6">Program Performance Breakdown</h3>
+                    <div id="programBreakdown">
+                        <!-- Program breakdown will be loaded here -->
+                        <div class="text-center py-8">
+                            <div class="loading-spinner mx-auto mb-4"></div>
+                            <p class="text-slate-600 dark:text-slate-400">Loading program breakdown...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- No Data State -->
+            <div id="noDataState" class="hidden text-center py-16">
+                <div class="max-w-md mx-auto">
+                    <div class="text-slate-600 dark:text-slate-400 mb-6">
+                        <svg class="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-700 dark:text-slate-300 mb-3">No Analytics Data Yet</h3>
+                    <p class="text-slate-600 dark:text-slate-400 mb-6">
+                        Complete your first quiz to start tracking your progress and getting personalized insights.
+                    </p>
+                    <a href="/quiz" class="inline-block px-6 py-3 bg-accent-green hover:bg-emerald-600 text-white rounded-lg transition duration-200 font-medium">
+                        Take Your First Quiz
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-8 py-6 border-t dark:border-slate-800 border-slate-200 bg-white/5 dark:bg-bg-dark/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+                &copy; <span id="currentYear"></span> Passco Student Hub. Your comprehensive exam preparation platform.
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set current year in footer
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+        
+        // Theme Toggle Logic
+        const body = document.body.parentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const menuToggle = document.getElementById('menuToggle');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const profileDropdownButton = document.getElementById('profileDropdownButton');
+        const profileDropdown = document.getElementById('profileDropdown');
+        
+        let theme = localStorage.getItem('theme') || 'dark';
+        
+        const updateTheme = (newTheme) => {
+            body.classList.remove('light', 'dark');
+            body.classList.add(newTheme);
+            localStorage.setItem('theme', newTheme);
+            theme = newTheme;
+            
+            if (newTheme === 'dark') {
+                themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>`;
+                themeIcon.classList.remove('text-slate-700');
+                themeIcon.classList.add('text-yellow-500');
+            } else {
+                themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>`;
+                themeIcon.classList.remove('text-yellow-500');
+                themeIcon.classList.add('text-slate-700');
+            }
+            
+            // Update charts when theme changes
+            if (performanceChart) {
+                updateChartTheme();
+            }
+        };
+        
+        updateTheme(theme);
+        
+        themeToggle.addEventListener('click', () => {
+            const newTheme = theme === 'dark' ? 'light' : 'dark';
+            updateTheme(newTheme);
+        });
+
+        // Mobile Menu Toggle
+        menuToggle.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        mobileMenu.querySelectorAll('.nav-item').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+            });
+        });
+
+        // Profile Dropdown Toggle
+        profileDropdownButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            profileDropdown.classList.remove('show');
+        });
+
+        // Prevent dropdown from closing when clicking inside
+        profileDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Load user data
+        loadUserData();
+
+        // Initialize analytics
+        initializeAnalytics();
+        
+        // Handle window resize for better mobile experience
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                handleMobileLayout();
+            }, 250);
+        });
+        
+        // Initial mobile layout check
+        handleMobileLayout();
+    });
+
+    // Mobile layout handler
+    function handleMobileLayout() {
+        const isMobile = window.innerWidth < 768;
+        
+        // Adjust chart heights on mobile
+        if (performanceChart) {
+            performanceChart.canvas.parentNode.style.height = isMobile ? '200px' : '256px';
+            performanceChart.resize();
+        }
+        
+        if (distributionChart) {
+            distributionChart.canvas.parentNode.style.height = isMobile ? '200px' : '256px';
+            distributionChart.resize();
+        }
+        
+        // Adjust button sizes for mobile
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (isMobile && btn.classList.contains('px-6')) {
+                btn.classList.add('px-4', 'py-2');
+                btn.classList.remove('px-6', 'py-3');
+            }
+        });
+        
+        // Adjust spacing for mobile
+        const containers = document.querySelectorAll('.premium-card');
+        containers.forEach(container => {
+            if (isMobile) {
+                container.classList.add('p-4');
+                container.classList.remove('p-6', 'p-8');
+            }
+        });
+    }
+
+    // Load user data from Flask session
+    function loadUserData() {
+        const userInitials = document.getElementById('userInitials');
+        
+        {% if user and user.username %}
+            const userName = "{{ user.username }}";
+            const initials = getUserInitials(userName);
+            userInitials.textContent = initials;
+        {% else %}
+            userInitials.textContent = "GU";
+        {% endif %}
+    }
+
+    function getUserInitials(name) {
+        return name.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 2);
+    }
+
+    // Logout function
+    window.logout = async function() {
+        try {
+            // Try Firebase logout first
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                await firebase.auth().signOut();
+            }
+            
+            // Then call your backend logout
+            const response = await fetch('/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (response.ok) {
+                window.location.href = '/auth/login';
+            } else {
+                // If backend logout fails, still redirect to login
+                window.location.href = '/auth/login';
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Fallback: redirect to login page
+            window.location.href = '/auth/login';
+        }
+    }
+
+    // Analytics Charts
+    let performanceChart;
+    let distributionChart;
+
+    // Track if analytics have been loaded to prevent duplicates
+    let analyticsLoaded = false;
+    let currentAnalyticsData = null;
+
+    function initializeAnalytics() {
+        loadAnalyticsData();
+        setupEventListeners();
+    }
+
+    async function loadAnalyticsData() {
+        // Prevent duplicate loading
+        if (analyticsLoaded && !confirm('Refresh analytics data?')) {
+            return;
+        }
+        
+        try {
+            // Show loading with mobile-friendly message
+            const loadingEl = document.getElementById('loadingState');
+            loadingEl.innerHTML = `
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-slate-600 dark:text-slate-400">Loading your analytics...</p>
+                <p class="text-sm text-slate-500 dark:text-slate-500 mt-2">This may take a moment</p>
+            `;
+            
+            const response = await fetch('/api/analytics');
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error('Failed to load analytics');
+            }
+            
+            // Store the current data
+            currentAnalyticsData = data.analytics;
+            
+            if (!data.analytics.has_data) {
+                showNoDataState();
+                analyticsLoaded = true;
+                return;
+            }
+            
+            // Clear previous content first to prevent duplicates
+            clearAnalyticsContent();
+            
+            updateDashboard(data.analytics);
+            
+            // Load progress chart data
+            await loadProgressChartData();
+            
+            // Load score distribution
+            await loadScoreDistribution();
+            
+            // Show analytics content
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('analyticsContent').classList.remove('hidden');
+            
+            // Mark as loaded
+            analyticsLoaded = true;
+            
+            // Handle mobile layout after content loads
+            handleMobileLayout();
+            
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+            const isMobile = window.innerWidth < 768;
+            const errorMessage = isMobile ? 
+                'Check your connection and try again' : 
+                'Failed to load your analytics data';
+                
+            document.getElementById('loadingState').innerHTML = `
+                <div class="text-red-400 mb-4">
+                    <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-red-400 mb-2">Error loading analytics</h3>
+                <p class="text-slate-600 dark:text-slate-400">${errorMessage}</p>
+                <div class="mt-4 flex ${isMobile ? 'flex-col space-y-2' : 'space-x-2'} justify-center">
+                    <button onclick="loadAnalyticsData()" class="px-${isMobile ? '4' : '6'} py-2 bg-accent-green hover:bg-emerald-600 text-white rounded-lg transition duration-200">
+                        Try Again
+                    </button>
+                    <button onclick="window.location.href='/quiz'" class="px-${isMobile ? '4' : '6'} py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition duration-200">
+                        Take a Quiz
+                    </button>
+                </div>
+            `;
+            analyticsLoaded = false;
+        }
+    }
+
+    function clearAnalyticsContent() {
+        // Clear all analytics content to prevent duplicates
+        const containers = [
+            'strengthList',
+            'weaknessList', 
+            'recentActivity',
+            'recommendationsList',
+            'programBreakdown'
+        ];
+        
+        containers.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.innerHTML = '';
+            }
+        });
+        
+        // Reset counters
+        const counters = [
+            'strengthCount',
+            'weaknessCount',
+            'recommendationCount'
+        ];
+        
+        counters.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = '0';
+            }
+        });
+    }
+
+    function updateDashboard(analytics) {
+        // Check if we have data and it's not a duplicate
+        if (!analytics || Object.keys(analytics).length === 0) {
+            showNoDataState();
+            return;
+        }
+        
+        // Remove duplicates from recent quizzes
+        if (analytics.recent_quizzes && analytics.recent_quizzes.length > 0) {
+            analytics.recent_quizzes = removeDuplicateQuizzes(analytics.recent_quizzes);
+        }
+        
+        // Remove duplicates from strength areas
+        if (analytics.strength_areas && analytics.strength_areas.length > 0) {
+            analytics.strength_areas = removeDuplicateAreas(analytics.strength_areas);
+        }
+        
+        // Remove duplicates from weakness areas
+        if (analytics.weakness_areas && analytics.weakness_areas.length > 0) {
+            analytics.weakness_areas = removeDuplicateAreas(analytics.weakness_areas);
+        }
+        
+        // Update quick stats - mobile responsive formatting
+        const isMobile = window.innerWidth < 768;
+        document.getElementById('totalQuizzes').textContent = analytics.overall_stats.total_quizzes;
+        document.getElementById('averageScore').textContent = `${analytics.overall_stats.average_score}%`;
+        document.getElementById('avgScore').textContent = `${analytics.overall_stats.average_score}%`;
+        document.getElementById('accuracy').textContent = `${analytics.overall_stats.accuracy}%`;
+        document.getElementById('accuracyRate').textContent = `${analytics.overall_stats.accuracy}%`;
+        
+        // Format time for mobile
+        const totalHours = Math.round(analytics.overall_stats.total_time_spent / 60);
+        const timeDisplay = isMobile ? `${totalHours}h` : `${totalHours} hours`;
+        document.getElementById('timeSpent').textContent = timeDisplay;
+        document.getElementById('totalTime').textContent = timeDisplay;
+        
+        // Update performance trend indicator
+        const trendIndicator = document.getElementById('performanceTrend');
+        const trend = analytics.overall_stats.improvement_trend;
+        
+        if (trend > 1) {
+            trendIndicator.textContent = `+${trend.toFixed(1)}%`;
+            trendIndicator.className = 'performance-indicator performance-up text-green-500 text-sm font-medium';
+        } else if (trend < -1) {
+            trendIndicator.textContent = `${trend.toFixed(1)}%`;
+            trendIndicator.className = 'performance-indicator performance-down text-red-500 text-sm font-medium';
+        } else {
+            trendIndicator.textContent = `${trend.toFixed(1)}%`;
+            trendIndicator.className = 'performance-indicator performance-neutral text-yellow-500 text-sm font-medium';
+        }
+
+        // Update strength areas
+        updateStrengthAreas(analytics.strength_areas);
+        
+        // Update weakness areas
+        updateWeaknessAreas(analytics.weakness_areas);
+        
+        // Update recent activity
+        updateRecentActivity(analytics.recent_quizzes);
+        
+        // Update recommendations
+        updateRecommendations(analytics.recommendations);
+        
+        // Update program breakdown
+        updateProgramBreakdown(analytics.program_breakdown);
+    }
+
+    function removeDuplicateQuizzes(quizzes) {
+        // Remove duplicate quizzes based on quiz_id or timestamp
+        const seen = new Set();
+        return quizzes.filter(quiz => {
+            const identifier = quiz.quiz_id || `${quiz.program}-${quiz.course}-${quiz.date}`;
+            if (seen.has(identifier)) {
+                return false;
+            }
+            seen.add(identifier);
+            return true;
+        });
+    }
+
+    function removeDuplicateAreas(areas) {
+        // Remove duplicate areas based on course and program
+        const seen = new Set();
+        return areas.filter(area => {
+            const identifier = `${area.program}-${area.course}`;
+            if (seen.has(identifier)) {
+                return false;
+            }
+            seen.add(identifier);
+            return true;
+        });
+    }
+
+    function updateStrengthAreas(strengths) {
+        const strengthList = document.getElementById('strengthList');
+        const strengthCount = document.getElementById('strengthCount');
+        const isMobile = window.innerWidth < 768;
+        
+        if (!strengths || strengths.length === 0) {
+            strengthList.innerHTML = `
+                <div class="text-center py-6">
+                    <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    <p class="text-slate-600 dark:text-slate-400">No strength areas identified yet</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-500 mt-1">Complete more quizzes to identify your strengths</p>
+                </div>
+            `;
+            strengthCount.textContent = isMobile ? '0' : '0 areas';
+            return;
+        }
+        
+        // Get unique strengths
+        const uniqueStrengths = removeDuplicateAreas(strengths);
+        
+        strengthCount.textContent = isMobile ? `${uniqueStrengths.length}` : `${uniqueStrengths.length} area${uniqueStrengths.length > 1 ? 's' : ''}`;
+        
+        strengthList.innerHTML = uniqueStrengths.map(strength => `
+            <div class="flex items-center justify-between p-${isMobile ? '3' : '4'} bg-green-500/10 rounded-lg border border-green-500/20">
+                <div class="flex-1 min-w-0">
+                    <h4 class="font-bold dark:text-white text-slate-800 truncate">${strength.course}</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400 truncate">${strength.program}</p>
+                </div>
+                <div class="text-right ml-${isMobile ? '2' : '4'} flex-shrink-0">
+                    <div class="text-${isMobile ? 'xl' : '2xl'} font-bold text-green-500">${strength.score}%</div>
+                    <div class="text-xs text-slate-600 dark:text-slate-400">${strength.quizzes} quiz${strength.quizzes > 1 ? 'zes' : ''}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateWeaknessAreas(weaknesses) {
+        const weaknessList = document.getElementById('weaknessList');
+        const weaknessCount = document.getElementById('weaknessCount');
+        const isMobile = window.innerWidth < 768;
+        
+        if (!weaknesses || weaknesses.length === 0) {
+            weaknessList.innerHTML = `
+                <div class="text-center py-6">
+                    <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-slate-600 dark:text-slate-400">Great! No major weaknesses detected</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-500 mt-1">Keep up the good work!</p>
+                </div>
+            `;
+            weaknessCount.textContent = isMobile ? '0' : '0 areas';
+            return;
+        }
+        
+        // Get unique weaknesses
+        const uniqueWeaknesses = removeDuplicateAreas(weaknesses);
+        
+        weaknessCount.textContent = isMobile ? `${uniqueWeaknesses.length}` : `${uniqueWeaknesses.length} area${uniqueWeaknesses.length > 1 ? 's' : ''}`;
+        
+        weaknessList.innerHTML = uniqueWeaknesses.map(weakness => {
+            // Escape special characters for JavaScript string
+            const escapedProgram = weakness.program.replace(/'/g, "\\'").replace(/"/g, '\\"');
+            const escapedCourse = weakness.course.replace(/'/g, "\\'").replace(/"/g, '\\"');
+            
+            return `
+            <div class="flex items-center justify-between p-${isMobile ? '3' : '4'} bg-red-500/10 rounded-lg border border-red-500/20">
+                <div class="flex-1 min-w-0">
+                    <h4 class="font-bold dark:text-white text-slate-800 truncate">${weakness.course}</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400 truncate">${weakness.program}</p>
+                </div>
+                <div class="text-right ml-${isMobile ? '2' : '4'} flex-shrink-0">
+                    <div class="text-${isMobile ? 'xl' : '2xl'} font-bold text-red-500">${weakness.score}%</div>
+                    <div class="text-xs text-slate-600 dark:text-slate-400">${weakness.quizzes} quiz${weakness.quizzes > 1 ? 'zes' : ''}</div>
+                </div>
+                <div class="ml-${isMobile ? '2' : '4'} flex-shrink-0">
+                    <button onclick="practiceWeakness('${escapedProgram}', '${escapedCourse}')" 
+                            class="px-${isMobile ? '2' : '3'} py-1 bg-red-500 hover:bg-red-600 text-white text-${isMobile ? 'xs' : 'sm'} rounded-lg transition duration-200 whitespace-nowrap">
+                        Practice
+                    </button>
+                </div>
+            </div>
+        `}).join('');
+    }
+
+    function updateRecentActivity(quizzes) {
+        const recentActivity = document.getElementById('recentActivity');
+        const isMobile = window.innerWidth < 768;
+        
+        if (!quizzes || quizzes.length === 0) {
+            recentActivity.innerHTML = `
+                <div class="text-center py-6">
+                    <p class="text-slate-600 dark:text-slate-400">No recent quiz activity</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Get unique quizzes
+        const uniqueQuizzes = removeDuplicateQuizzes(quizzes);
+        
+        // Limit to last 5 quizzes to prevent overcrowding
+        const recentQuizzes = uniqueQuizzes.slice(0, 5);
+        
+        recentActivity.innerHTML = recentQuizzes.map(quiz => `
+            <div class="flex items-center justify-between p-${isMobile ? '3' : '4'} bg-slate-100 dark:bg-slate-800 rounded-lg">
+                <div class="flex items-center space-x-${isMobile ? '2' : '4'} flex-1 min-w-0">
+                    <div class="w-${isMobile ? '8' : '10'} h-${isMobile ? '8' : '10'} rounded-full flex items-center justify-center ${quiz.score >= 80 ? 'bg-green-500/20 text-green-500' : quiz.score >= 60 ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-500'} flex-shrink-0">
+                        ${quiz.score}%
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold dark:text-white text-slate-800 truncate text-${isMobile ? 'sm' : 'base'}">${quiz.course || 'Untitled Quiz'}</h4>
+                        <p class="text-${isMobile ? 'xs' : 'sm'} text-slate-600 dark:text-slate-400 truncate">${quiz.program || 'General'} • ${quiz.date || 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="text-right ml-${isMobile ? '2' : '4'} flex-shrink-0">
+                    <div class="text-${isMobile ? 'xs' : 'sm'} font-medium dark:text-white text-slate-800">${quiz.correct_answers}/${quiz.total_questions}</div>
+                    <div class="text-${isMobile ? 'xxs' : 'xs'} text-slate-600 dark:text-slate-400">correct</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateRecommendations(recommendations) {
+        const recommendationsList = document.getElementById('recommendationsList');
+        const recommendationCount = document.getElementById('recommendationCount');
+        const isMobile = window.innerWidth < 768;
+        
+        if (!recommendations || recommendations.length === 0) {
+            recommendationsList.innerHTML = `
+                <div class="text-center py-6">
+                    <p class="text-slate-600 dark:text-slate-400">No recommendations available</p>
+                </div>
+            `;
+            recommendationCount.textContent = isMobile ? '0' : '0 tips';
+            return;
+        }
+        
+        recommendationCount.textContent = isMobile ? `${recommendations.length}` : `${recommendations.length} tip${recommendations.length > 1 ? 's' : ''}`;
+        
+        recommendationsList.innerHTML = recommendations.map(rec => `
+            <div class="p-${isMobile ? '3' : '4'} bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <div class="flex items-start space-x-${isMobile ? '2' : '3'}">
+                    <div class="p-${isMobile ? '1' : '2'} bg-blue-500/20 rounded-lg flex-shrink-0">
+                        ${rec.type === 'challenge' ? '🏆' : rec.type === 'practice' ? '📚' : '🎯'}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold dark:text-white text-slate-800 mb-1 text-${isMobile ? 'sm' : 'base'}">${rec.title}</h4>
+                        <p class="text-${isMobile ? 'xs' : 'sm'} text-slate-600 dark:text-slate-400">${rec.message}</p>
+                        <span class="inline-block mt-2 px-2 py-1 text-${isMobile ? 'xxs' : 'xs'} ${rec.priority === 'high' ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'} rounded">
+                            ${rec.priority === 'high' ? 'High Priority' : 'Medium Priority'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateProgramBreakdown(programs) {
+        const programBreakdown = document.getElementById('programBreakdown');
+        const isMobile = window.innerWidth < 768;
+        
+        if (!programs || Object.keys(programs).length === 0) {
+            programBreakdown.innerHTML = `
+                <div class="text-center py-6">
+                    <p class="text-slate-600 dark:text-slate-400">No program data available</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const programEntries = Object.entries(programs);
+        
+        programBreakdown.innerHTML = programEntries.map(([program, data]) => {
+            const avgScore = data.average_score || 0;
+            const totalQuizzes = data.quiz_count || 0;
+            
+            return `
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold dark:text-white text-slate-800 text-${isMobile ? 'sm' : 'base'} truncate">${program}</h4>
+                        <div class="text-right flex-shrink-0 ml-2">
+                            <div class="text-${isMobile ? 'base' : 'lg'} font-bold ${avgScore >= 80 ? 'text-green-500' : avgScore >= 60 ? 'text-yellow-500' : 'text-red-500'}">${avgScore}%</div>
+                            <div class="text-${isMobile ? 'xxs' : 'xs'} text-slate-600 dark:text-slate-400">${totalQuizzes} quiz${totalQuizzes > 1 ? 'zes' : ''}</div>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                        <div class="bg-accent-green h-2 rounded-full" style="width: ${Math.min(avgScore, 100)}%"></div>
+                    </div>
+                    
+                    ${data.courses ? `
+                        <div class="mt-4 grid grid-cols-1 ${isMobile ? '' : 'sm:grid-cols-2'} gap-2">
+                            ${Object.entries(data.courses).map(([course, courseData]) => `
+                                <div class="p-2 ${isMobile ? 'px-3' : ''} bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-${isMobile ? 'xs' : 'sm'} dark:text-white text-slate-800 truncate">${course}</span>
+                                        <span class="text-${isMobile ? 'xs' : 'sm'} ${courseData.average_score >= 80 ? 'text-green-500' : courseData.average_score >= 60 ? 'text-yellow-500' : 'text-red-500'} ml-2">${courseData.average_score}%</span>
+                                    </div>
+                                    <div class="text-${isMobile ? 'xxs' : 'xs'} text-slate-600 dark:text-slate-400 mt-1">${courseData.quiz_count || 0} quiz${(courseData.quiz_count || 0) > 1 ? 'zes' : ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadProgressChartData() {
+        try {
+            const timeRange = document.getElementById('timeRange').value;
+            const response = await fetch(`/api/analytics/progress?range=${timeRange}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                renderPerformanceChart(data);
+            }
+        } catch (error) {
+            console.error('Error loading progress data:', error);
+        }
+    }
+
+    async function loadScoreDistribution() {
+        try {
+            const response = await fetch('/api/score-distribution');
+            const data = await response.json();
+            
+            if (data.success) {
+                renderDistributionChart(data.distribution);
+            }
+        } catch (error) {
+            console.error('Error loading score distribution:', error);
+        }
+    }
+
+    function updateChartTheme() {
+        if (performanceChart) {
+            const isDark = document.body.parentElement.classList.contains('dark');
+            const textColor = isDark ? '#e2e8f0' : '#1e293b';
+            const gridColor = isDark ? '#334155' : '#e2e8f0';
+            
+            performanceChart.options.scales.x.ticks.color = textColor;
+            performanceChart.options.scales.x.grid.color = gridColor;
+            performanceChart.options.scales.y.ticks.color = textColor;
+            performanceChart.options.scales.y.grid.color = gridColor;
+            performanceChart.options.scales.y1.ticks.color = textColor;
+            performanceChart.options.plugins.legend.labels.color = textColor;
+            performanceChart.update();
+        }
+        
+        if (distributionChart) {
+            const isDark = document.body.parentElement.classList.contains('dark');
+            const textColor = isDark ? '#e2e8f0' : '#1e293b';
+            
+            distributionChart.options.plugins.legend.labels.color = textColor;
+            distributionChart.update();
+        }
+    }
+
+    function renderPerformanceChart(data) {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const isMobile = window.innerWidth < 768;
+        
+        if (performanceChart) {
+            performanceChart.destroy();
+        }
+        
+        const isDark = document.body.parentElement.classList.contains('dark');
+        const textColor = isDark ? '#e2e8f0' : '#1e293b';
+        const gridColor = isDark ? '#334155' : '#e2e8f0';
+        
+        // Adjust font sizes for mobile
+        const fontSize = isMobile ? 10 : 12;
+        const titleFontSize = isMobile ? 11 : 13;
+        
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Average Score',
+                    data: data.average_scores,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: isMobile ? 1.5 : 2,
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Quizzes Taken',
+                    data: data.quiz_counts,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: isMobile ? 1.5 : 2,
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor,
+                            font: {
+                                size: fontSize
+                            },
+                            maxRotation: isMobile ? 45 : 0
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor,
+                            font: {
+                                size: fontSize
+                            },
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        title: {
+                            display: !isMobile,
+                            text: 'Score (%)',
+                            color: textColor,
+                            font: {
+                                size: titleFontSize
+                            }
+                        }
+                    },
+                    y1: {
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        ticks: {
+                            color: textColor,
+                            font: {
+                                size: fontSize
+                            }
+                        },
+                        title: {
+                            display: !isMobile,
+                            text: 'Quiz Count',
+                            color: textColor,
+                            font: {
+                                size: titleFontSize
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor,
+                            font: {
+                                size: fontSize
+                            },
+                            boxWidth: isMobile ? 10 : 12,
+                            padding: isMobile ? 10 : 20
+                        },
+                        position: isMobile ? 'bottom' : 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        bodyFont: {
+                            size: fontSize
+                        },
+                        titleFont: {
+                            size: fontSize
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.datasetIndex === 0) {
+                                    label += context.parsed.y + '%';
+                                } else {
+                                    label += context.parsed.y + ' quiz' + (context.parsed.y > 1 ? 'zes' : '');
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderDistributionChart(distribution) {
+        const ctx = document.getElementById('distributionChart').getContext('2d');
+        const isMobile = window.innerWidth < 768;
+        
+        if (distributionChart) {
+            distributionChart.destroy();
+        }
+        
+        const isDark = document.body.parentElement.classList.contains('dark');
+        const textColor = isDark ? '#e2e8f0' : '#1e293b';
+        const gridColor = isDark ? '#334155' : '#e2e8f0';
+        
+        // Adjust font sizes for mobile
+        const fontSize = isMobile ? 10 : 12;
+        
+        const labels = Object.keys(distribution);
+        const data = Object.values(distribution);
+        const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+        
+        distributionChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderColor: isDark ? '#1e293b' : '#ffffff',
+                    borderWidth: isMobile ? 1 : 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: isMobile ? '60%' : '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: textColor,
+                            padding: isMobile ? 10 : 20,
+                            font: {
+                                size: fontSize
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: isMobile ? 8 : 12
+                        }
+                    },
+                    tooltip: {
+                        bodyFont: {
+                            size: fontSize
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.label}: ${context.parsed}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function showNoDataState() {
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('noDataState').classList.remove('hidden');
+        
+        // Mobile adjustments for no data state
+        const isMobile = window.innerWidth < 768;
+        const noDataEl = document.getElementById('noDataState');
+        if (isMobile) {
+            noDataEl.classList.add('px-4');
+            noDataEl.querySelector('button').classList.add('w-full', 'py-3');
+        }
+    }
+
+    function practiceWeakness(program, course) {
+        // Redirect to quiz page with pre-selected program and course
+        window.location.href = `/quiz?program=${encodeURIComponent(program)}&course=${encodeURIComponent(course)}`;
+    }
+
+    function updateChartRange(range) {
+        const isMobile = window.innerWidth < 768;
+        const buttons = document.querySelectorAll('#performanceChart').parentElement.previousElementSibling.querySelectorAll('button');
+        
+        // Update active button
+        buttons.forEach(btn => {
+            btn.classList.remove('bg-accent-green', 'text-white');
+            btn.classList.add('bg-slate-200', 'dark:bg-slate-700', 'hover:bg-slate-300', 'dark:hover:bg-slate-600');
+            btn.classList.remove('px-4', 'py-2');
+            btn.classList.add(isMobile ? 'px-2' : 'px-3', 'py-1');
+        });
+        
+        event.target.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'hover:bg-slate-300', 'dark:hover:bg-slate-600');
+        event.target.classList.add('bg-accent-green', 'text-white');
+        
+        // Update chart data
+        loadProgressChartData();
+    }
+
+    function refreshAnalytics() {
+        const isMobile = window.innerWidth < 768;
+        
+        document.getElementById('analyticsContent').classList.add('hidden');
+        document.getElementById('loadingState').classList.remove('hidden');
+        document.getElementById('noDataState').classList.add('hidden');
+        
+        // Show mobile-friendly loading message
+        const loadingEl = document.getElementById('loadingState');
+        loadingEl.innerHTML = `
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-slate-600 dark:text-slate-400">${isMobile ? 'Refreshing...' : 'Refreshing analytics data...'}</p>
+        `;
+        
+        // Reset loaded flag to force reload
+        analyticsLoaded = false;
+        
+        setTimeout(() => {
+            loadAnalyticsData();
+        }, 500);
+    }
+
+    function setupEventListeners() {
+        // Time range selector - mobile friendly
+        const timeRangeSelect = document.getElementById('timeRange');
+        timeRangeSelect.addEventListener('change', function() {
+            loadProgressChartData();
+        });
+        
+        // Make time range selector easier to use on mobile
+        if (window.innerWidth < 768) {
+            timeRangeSelect.classList.add('text-sm', 'py-2');
+        }
+        
+        // Add touch events for better mobile interaction
+        const touchElements = document.querySelectorAll('.quiz-option, button, .course-card');
+        touchElements.forEach(el => {
+            el.addEventListener('touchstart', function() {
+                this.classList.add('active-touch');
+            });
+            
+            el.addEventListener('touchend', function() {
+                this.classList.remove('active-touch');
+            });
+        });
+    }
+
+    // Make functions globally available
+    window.refreshAnalytics = refreshAnalytics;
+    window.updateChartRange = updateChartRange;
+    window.practiceWeakness = practiceWeakness;
+    
+    // Export for debugging
+    if (typeof window !== 'undefined') {
+        window.handleMobileLayout = handleMobileLayout;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passco - Neon Login</title>
+    
+
+<script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define Neon Green Color and Glow Effects */
+        :root {
+            /* Neon Green (Bright Lime) */
+            --color-primary: 50 255 100; 
+            /* Deep Black/Dark Blue Background for contrast */
+            --color-dark-bg: 5 5 15; 
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            /* Set a solid deep black background */
+            background-color: rgb(var(--color-dark-bg)); 
+            
+            /* Maintain centering and full height: This centers the section */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+            overflow: hidden;
+            position: relative; 
+            color: #fff; /* Default text color for the page */
+        }
+        
+        /* Full-screen background image */
+        .background-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            /* Using the user's selected image URL */
+            background-image: url('https://static.vecteezy.com/system/resources/previews/026/190/465/large_2x/abstract-hexagonal-technology-hitech-background-neon-green-black-free-photo.jpg'); 
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.5) contrast(1.2); /* Darken and enhance colors */
+        }
+        
+        /* Keyframe for subtle button pulse effect */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(var(--color-primary), 0.6), 0 0 5px rgba(var(--color-primary), 0.3); }
+            50% { box-shadow: 0 0 15px rgba(var(--color-primary), 0.8), 0 0 8px rgba(var(--color-primary), 0.5); }
+        }
+
+        /* Utility class for neon buttons with glow */
+        .btn-neon {
+            background-color: rgb(var(--color-primary));
+            color: rgb(var(--color-dark-bg)); 
+            box-shadow: 0 0 15px rgba(var(--color-primary), 0.7); 
+            transition: all 0.2s ease-in-out;
+            animation: pulse-glow 3s infinite alternate; /* Subtle breathing animation */
+        }
+        .btn-neon:hover {
+            box-shadow: 0 0 30px rgba(var(--color-primary), 1); 
+            transform: translateY(-2px);
+        }
+
+        /* Utility class for neon text */
+        .text-neon {
+            color: rgb(var(--color-primary));
+            text-shadow: 0 0 8px rgba(var(--color-primary), 0.8);
+        }
+        
+        /* Custom focus style for inputs with neon glow border */
+        .focus-neon:focus {
+            outline: none;
+            --tw-ring-opacity: 1;
+            --tw-ring-color: rgb(var(--color-primary));
+            border-color: rgb(var(--color-primary));
+            box-shadow: 0 0 10px rgba(var(--color-primary), 0.6);
+        }
+
+        /* Inputs will now be directly over the background image, with dark transparent styling */
+        .input-dark-transparent {
+            background-color: rgba(0, 0, 0, 0.4); /* Darker transparent background */
+            border: 1px solid rgba(50, 255, 100, 0.2); /* Subtle neon border */
+            color: #fff;
+            placeholder-color: rgba(255, 255, 255, 0.6);
+        }
+        .input-dark-transparent::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Style for the blurred section container itself */
+        .blurred-login-section {
+            position: relative; 
+            z-index: 10; 
+            width: 100%;
+            max-width: 28rem; 
+            padding: 2rem; 
+            border-radius: 1rem; 
+            
+            /* Apply backdrop blur and a slight dark overlay to section */
+            background-color: rgba(0, 0, 0, 0.4); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            
+            /* Optional: subtle border glow for the section itself */
+            border: 1px solid rgba(50, 255, 100, 0.1);
+        }
+        
+        /* Session notification style */
+        .session-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    
+
+<div class="background-image"></div>
+    
+    
+
+<div class="fixed inset-0 bg-repeat opacity-5 z-[1]" style="background-image: url('data:image/svg+xml;utf8,<svg width=\'10\' height=\'10\' viewBox=\'0 0 10 10\' xmlns=\'http://www.w3.org/2000/svg\'><rect width=\'1\' height=\'1\' fill=\'%230a0a0a\'/><rect x=\'5\' y=\'5\' width=\'1\' height=\'1\' fill=\'%230a0a0a\'/></svg>');"></div>
+    
+    <!-- Removed min-h-screen to allow body flex centering to work -->
+<section class="flex flex-col items-center justify-center relative text-center px-6 overflow-hidden blurred-login-section">
+        
+        <h2 class="text-4xl font-bold text-gray-50 mb-2">Welcome Back</h2>
+        <p class="text-gray-300 mb-10">
+            Log in to your <span class="text-neon font-semibold">Passco</span> account
+        </p>
+
+        <form id="loginForm" class="space-y-5 w-full"> 
+
+<input type="email" id="email" placeholder="Email address" required
+                class="w-full px-5 py-3 rounded-xl input-dark-transparent focus:outline-none focus:ring-2 focus-neon">
+
+            <div class="relative">
+                <input type="password" id="password" placeholder="Password" required
+                    class="w-full px-5 py-3 pr-12 rounded-xl input-dark-transparent focus:outline-none focus:ring-2 focus-neon">
+                <button type="button" onclick="window.togglePassword('password','togglePasswordIcon')"
+                    class="absolute right-4 top-3.5 text-gray-400 hover:text-neon transition">
+                    <svg id="togglePasswordIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12 18 19.5 12 19.5 2.25 12 2.25 12z" />
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" />
+                    </svg>
+                </button>
+            </div>
+
+            <button type="submit"
+                class="w-full py-3 font-semibold rounded-xl shadow-lg transition btn-neon">Login</button>
+        </form>
+
+        <div class="flex items-center my-8 w-full">
+            <hr class="flex-grow border-gray-700">
+            <span class="mx-3 text-gray-500 text-sm">Or</span>
+            <hr class="flex-grow border-gray-700">
+        </div>
+
+        <button id="googleSignIn" type="button"
+            class="w-full flex items-center justify-center gap-3 py-3 rounded-xl shadow-sm text-gray-50 hover:border-neon hover:text-neon transition input-dark-transparent">
+            
+
+<!-- Updated Google Icon SVG -->
+<svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12.000,4.8c1.37,0,2.68,0.45,3.74,1.26l3.36-3.36C17.65,1.52,14.99,0,12.000,0C7.270,0,3.190,2.69,1.190,6.62L5.050,9.75C6.150,7.18,8.870,4.8,12.000,4.8z" fill="#EA4335"/>
+    <path d="M1.19,6.62c-0.24,0.78-0.38,1.61-0.38,2.46c0,0.85,0.14,1.68,0.38,2.46l3.86,3.13C5.51,13.88,5.19,13,5.19,12.08C5.19,11.16,5.51,10.28,6.05,9.75L1.19,6.62z" fill="#FBBC04"/>
+    <path d="M12.000,24c-2.91,0-5.55-0.97-7.40-2.67l3.86-3.13C9.07,19.98,10.46,20.4,12.000,20.4c3.27,0,6.01-1.68,7.57-4.14l3.77,2.95C20.81,22.1,16.64,24,12.000,24z" fill="#34A853"/>
+    <path d="M22.5,12c0-0.78-0.08-1.54-0.21-2.28h-9.98v4.56h5.81c-0.3,1.56-1.28,2.87-2.73,3.75l3.77,2.95c2.19-2.02,3.47-4.99,3.47-8.98C23.63,14.99,23.6,12,22.5,12z" fill="#4285F4"/>
+</svg>
+            <span class="font-medium">Login with Google</span>
+        </button>
+
+        <p class="text-gray-400 mt-8 text-sm">
+            Don't have an account?
+            <a href="/auth/signup" class="text-neon hover:text-green-400 font-medium transition">Sign up</a>
+        </p>
+        
+        <!-- Session info display (hidden by default) -->
+        <div id="sessionInfo" class="mt-4 text-xs text-gray-500 hidden">
+            <div class="flex items-center justify-center gap-2">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>Single device session enabled</span>
+            </div>
+        </div>
+    </section>
+
+    
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.2.0/firebase-app.js";
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    GoogleAuthProvider,
+    signInWithPopup,
+    setPersistence,
+    browserSessionPersistence
+  } from "https://www.gstatic.com/firebasejs/10.2.0/firebase-auth.js";
+
+  const firebaseConfig = {{ firebase_config | tojson }};
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  await setPersistence(auth, browserSessionPersistence);
+
+  function togglePassword(fieldId, iconId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(iconId);
+    if (field.type === "password") {
+      field.type = "text";
+      icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.5 12c0 1.272.243 2.483.686 3.597M12 4.5c3.3 0 6.3 1.697 8.02 4.223M21 12c0 1.25-.22 2.447-.624 3.558M9.88 9.88l4.24 4.24M9.88 14.12l4.24-4.24"/>`;
+    } else {
+      field.type = "password";
+      icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12 18 19.5 12 19.5 2.25 12 2.25 12z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"/>`;
+    }
+  }
+
+  // Helper function to generate device fingerprint
+  function getDeviceFingerprint() {
+    const userAgent = navigator.userAgent;
+    const language = navigator.language;
+    const platform = navigator.platform;
+    
+    const fingerprintStr = `${userAgent}:${language}:${platform}:${screen.width}x${screen.height}`;
+    
+    let hash = 0;
+    for (let i = 0; i < fingerprintStr.length; i++) {
+      const char = fingerprintStr.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(16);
+  }
+
+  // Helper function to show session notification
+  function showSessionNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = 'session-notification';
+    notification.innerHTML = `
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+            d="${type === 'error' ? 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z' : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'}" />
+        </svg>
+        <span>${message}</span>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+      notification.remove();
+    }, 5000);
+  }
+
+  // -------- Email/Password login --------
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    if (!email || !password) return alert("Please fill in all fields.");
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      if (!user.emailVerified) return alert("Verify your email first.");
+
+      // Get device fingerprint for single device login
+      const deviceFingerprint = getDeviceFingerprint();
+      
+      const response = await fetch("/auth/login_complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          username: user.displayName || "",
+          device_fingerprint: deviceFingerprint  // Send device info for session management
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.status === "success") {
+        // Store session info in localStorage for client-side tracking
+        if (data.session_id) {
+          localStorage.setItem('passquestion_user_session', JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            session_id: data.session_id,
+            device_fingerprint: deviceFingerprint,
+            login_time: new Date().toISOString()
+          }));
+          
+          // Show session info
+          document.getElementById('sessionInfo').classList.remove('hidden');
+        }
+        
+        // Check if user was logged out from another device
+        if (data.message && data.message.includes('another device')) {
+          showSessionNotification('You were logged out from another device', 'info');
+        }
+        
+        // Redirect to appropriate page
+        if (data.redirect) {
+          window.location.href = data.redirect;
+        }
+      } else {
+        alert(data.message || "Login failed.");
+      }
+    } catch (err) {
+      alert("Login error: " + err.message);
+    }
+  });
+
+  // -------- Google login --------
+  document.getElementById("googleSignIn").addEventListener("click", async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Get device fingerprint for single device login
+      const deviceFingerprint = getDeviceFingerprint();
+      
+      const response = await fetch("/auth/login_complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          username: user.displayName || "",
+          device_fingerprint: deviceFingerprint  // Send device info for session management
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.status === "success") {
+        // Store session info in localStorage for client-side tracking
+        if (data.session_id) {
+          localStorage.setItem('passquestion_user_session', JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            session_id: data.session_id,
+            device_fingerprint: deviceFingerprint,
+            login_time: new Date().toISOString()
+          }));
+          
+          // Show session info
+          document.getElementById('sessionInfo').classList.remove('hidden');
+        }
+        
+        // Check if user was logged out from another device
+        if (data.message && data.message.includes('another device')) {
+          showSessionNotification('You were logged out from another device', 'info');
+        }
+        
+        // Redirect to appropriate page
+        if (data.redirect) {
+          window.location.href = data.redirect;
+        }
+      } else {
+        alert(data.message || "Login failed.");
+      }
+    } catch (err) {
+      alert("Google login error: " + err.message);
+    }
+  });
+
+  // Check for existing session on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check if user has existing session
+    const existingSession = localStorage.getItem('passquestion_user_session');
+    if (existingSession) {
+      try {
+        const sessionData = JSON.parse(existingSession);
+        console.log('Existing session found for:', sessionData.email);
+        
+        // Show session info
+        document.getElementById('sessionInfo').classList.remove('hidden');
+        
+        // Check session validity with server
+        checkSessionValidity(sessionData);
+      } catch (e) {
+        localStorage.removeItem('passquestion_user_session');
+      }
+    }
+  });
+
+  // Function to check session validity with server
+  async function checkSessionValidity(sessionData) {
+    try {
+      const response = await fetch('/auth/api/session/check', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!data.valid) {
+        // Session is invalid
+        localStorage.removeItem('passquestion_user_session');
+        document.getElementById('sessionInfo').classList.add('hidden');
+        
+        if (data.message && data.message.includes('another login')) {
+          showSessionNotification('You were logged out from another device', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Session check error:', error);
+    }
+  }
+
+  // Make functions available globally
+  window.togglePassword = togglePassword;
+  window.getDeviceFingerprint = getDeviceFingerprint;
+  window.showSessionNotification = showSessionNotification;
+  
+  // Function to clear session (for logout)
+  window.clearUserSession = function() {
+    localStorage.removeItem('passquestion_user_session');
+    document.getElementById('sessionInfo').classList.add('hidden');
+  };
+  
+  // Function to check if user has active session
+  window.hasActiveSession = function() {
+    return !!localStorage.getItem('passquestion_user_session');
+  };
+</script>
+
+<!-- Add session checking script for logged-in pages -->
+<script>
+// This script will be included in all pages that require login
+if (window.location.pathname !== '/auth/login' && 
+    window.location.pathname !== '/auth/signup' &&
+    window.location.pathname !== '/') {
+  
+  // Check session periodically (every 2 minutes)
+  setInterval(async function() {
+    const sessionData = localStorage.getItem('passquestion_user_session');
+    if (!sessionData) return;
+    
+    try {
+      const response = await fetch('/auth/api/session/check');
+      const data = await response.json();
+      
+      if (!data.valid) {
+        // Session is invalid
+        localStorage.removeItem('passquestion_user_session');
+        
+        // Show notification
+        if (data.message && data.message.includes('another login')) {
+          showSessionNotification('You have been logged out because you logged in from another device', 'error');
+        } else if (data.message && data.message.includes('expired')) {
+          showSessionNotification('Your session has expired. Please log in again.', 'error');
+        }
+        
+        // Redirect to login page
+        setTimeout(() => {
+          if (data.redirect) {
+            window.location.href = data.redirect;
+          } else {
+            window.location.href = '/auth/login';
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Session check error:', error);
+    }
+  }, 120000); // Check every 2 minutes
+  
+  // Also check when page becomes visible
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      // Check session when user returns to the tab
+      const sessionData = localStorage.getItem('passquestion_user_session');
+      if (sessionData) {
+        fetch('/auth/api/session/check').then(response => response.json())
+          .then(data => {
+            if (!data.valid) {
+              localStorage.removeItem('passquestion_user_session');
+              if (data.redirect) {
+                window.location.href = data.redirect;
+              }
+            }
+          });
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Review Questions - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet">
+    <style>
+        .question-card { border-left: 4px solid #0d6efd; }
+        .needs-review { border-left: 4px solid #dc3545; }
+        .reviewed { border-left: 4px solid #198754; }
+        .quality-badge { font-size: 0.8em; }
+        .option-correct { background-color: #d1e7dd; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h2>Review Generated Questions</h2>
+        
+        <!-- Filters -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label>Status</label>
+                        <select class="form-select" id="filterStatus">
+                            <option value="needs_review">Needs Review</option>
+                            <option value="all">All Questions</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Program</label>
+                        <select class="form-select" id="filterProgram">
+                            <option value="">All Programs</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Course</label>
+                        <select class="form-select" id="filterCourse">
+                            <option value="">All Courses</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Quality</label>
+                        <select class="form-select" id="filterQuality">
+                            <option value="">All Quality</option>
+                            <option value="poor">Poor (0-49)</option>
+                            <option value="fair">Fair (50-69)</option>
+                            <option value="good">Good (70-89)</option>
+                            <option value="excellent">Excellent (90-100)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Questions List -->
+        <div id="questionsContainer"></div>
+        
+        <!-- Pagination -->
+        <nav id="pagination"></nav>
+    </div>
+    
+    <!-- Review Modal -->
+    <div class="modal fade" id="reviewModal">
+        <!-- Modal content for reviewing individual questions -->
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/admin_review.js"></script>
+
+    <script>$(document).ready(function() {
+    let currentPage = 1;
+    const perPage = 10;
+    
+    // Load questions
+    function loadQuestions() {
+        const status = $('#filterStatus').val();
+        const program = $('#filterProgram').val();
+        const course = $('#filterCourse').val();
+        const quality = $('#filterQuality').val();
+        
+        $.ajax({
+            url: '/admin/api/questions/review',
+            method: 'GET',
+            data: {
+                needs_review: status === 'needs_review',
+                program: program,
+                course: course,
+                page: currentPage,
+                per_page: perPage
+            },
+            success: function(response) {
+                renderQuestions(response.questions);
+                renderPagination(response.total, response.total_pages);
+            }
+        });
+    }
+    
+    function renderQuestions(questions) {
+        const container = $('#questionsContainer');
+        container.empty();
+        
+        if (questions.length === 0) {
+            container.html('<div class="alert alert-info">No questions found.</div>');
+            return;
+        }
+        
+        questions.forEach(function(q) {
+            const needsReview = q.needsReview ? 'needs-review' : 'reviewed';
+            const qualityClass = getQualityClass(q.qualityScore || 0);
+            
+            const card = `
+                <div class="card mb-3 question-card ${needsReview}" data-id="${q.id}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title">${escapeHtml(q.question || 'No question')}</h5>
+                                <div class="mb-2">
+                                    <span class="badge bg-primary">${q.program || 'N/A'}</span>
+                                    <span class="badge bg-secondary">${q.course || 'N/A'}</span>
+                                    <span class="badge bg-info">${q.difficulty || 'medium'}</span>
+                                    <span class="badge ${qualityClass} quality-badge">
+                                        Quality: ${q.qualityScore || 0}/100
+                                    </span>
+                                    ${q.needsReview ? '<span class="badge bg-danger">Needs Review</span>' : ''}
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${q.id}">
+                                    Edit
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="options mt-3">
+                            ${renderOptions(q.options || [], q.correctAnswer || 0)}
+                        </div>
+                        
+                        ${q.explanation ? `
+                            <div class="alert alert-light mt-2">
+                                <strong>Explanation:</strong> ${escapeHtml(q.explanation)}
+                            </div>
+                        ` : ''}
+                        
+                        ${q.reviewNotes ? `
+                            <div class="alert alert-warning mt-2">
+                                <strong>Review Notes:</strong> ${escapeHtml(q.reviewNotes)}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="mt-2 text-muted small">
+                            Source: ${q.source || 'manual'} | 
+                            Created: ${formatDate(q.createdAt)} |
+                            By: ${q.createdBy || 'Admin'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.append(card);
+        });
+        
+        // Add edit button handlers
+        $('.edit-btn').click(function() {
+            const questionId = $(this).data('id');
+            openReviewModal(questionId);
+        });
+    }
+    
+    function renderOptions(options, correctIndex) {
+        let html = '<div class="row">';
+        const labels = ['A', 'B', 'C', 'D'];
+        
+        options.forEach((opt, index) => {
+            const isCorrect = index === correctIndex;
+            const bgClass = isCorrect ? 'option-correct' : '';
+            
+            html += `
+                <div class="col-md-6 mb-2">
+                    <div class="p-2 border rounded ${bgClass}">
+                        <strong>${labels[index]}:</strong> ${escapeHtml(opt || 'No option')}
+                        ${isCorrect ? '<span class="badge bg-success float-end">Correct</span>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        return html;
+    }
+    
+    function renderPagination(total, totalPages) {
+        const pagination = $('#pagination');
+        pagination.empty();
+        
+        if (totalPages <= 1) return;
+        
+        let html = '<ul class="pagination">';
+        
+        // Previous button
+        html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>
+                 </li>`;
+        
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                     </li>`;
+        }
+        
+        // Next button
+        html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>
+                 </li>`;
+        
+        html += '</ul>';
+        pagination.html(html);
+        
+        // Add click handlers
+        $('.page-link').click(function(e) {
+            e.preventDefault();
+            const page = $(this).data('page');
+            if (page && page >= 1 && page <= totalPages) {
+                currentPage = page;
+                loadQuestions();
+            }
+        });
+    }
+    
+    function getQualityClass(score) {
+        if (score >= 90) return 'bg-success';
+        if (score >= 70) return 'bg-info';
+        if (score >= 50) return 'bg-warning';
+        return 'bg-danger';
+    }
+    
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function openReviewModal(questionId) {
+        // Load question data and show modal
+        $.ajax({
+            url: `/admin/api/admin/questions?id=${questionId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.questions.length > 0) {
+                    const q = response.questions[0];
+                    showReviewModal(q);
+                }
+            }
+        });
+    }
+    
+    function showReviewModal(question) {
+        // Create modal content
+        const modalContent = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Review Question</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Edit form for the question -->
+                        <form id="reviewForm">
+                            <input type="hidden" name="id" value="${question.id}">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Question</label>
+                                <textarea class="form-control" name="question" rows="3">${escapeHtml(question.question || '')}</textarea>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Option A</label>
+                                    <input type="text" class="form-control" name="optionA" value="${escapeHtml(question.options ? question.options[0] : '')}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Option B</label>
+                                    <input type="text" class="form-control" name="optionB" value="${escapeHtml(question.options ? question.options[1] : '')}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Option C</label>
+                                    <input type="text" class="form-control" name="optionC" value="${escapeHtml(question.options ? question.options[2] : '')}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Option D</label>
+                                    <input type="text" class="form-control" name="optionD" value="${escapeHtml(question.options ? question.options[3] : '')}">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Correct Answer</label>
+                                <select class="form-select" name="correctAnswer">
+                                    <option value="0" ${question.correctAnswer === 0 ? 'selected' : ''}>A</option>
+                                    <option value="1" ${question.correctAnswer === 1 ? 'selected' : ''}>B</option>
+                                    <option value="2" ${question.correctAnswer === 2 ? 'selected' : ''}>C</option>
+                                    <option value="3" ${question.correctAnswer === 3 ? 'selected' : ''}>D</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Explanation</label>
+                                <textarea class="form-control" name="explanation" rows="2">${escapeHtml(question.explanation || '')}</textarea>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Quality Score (0-100)</label>
+                                    <input type="number" class="form-control" name="qualityScore" min="0" max="100" value="${question.qualityScore || 70}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Difficulty</label>
+                                    <select class="form-select" name="difficulty">
+                                        <option value="easy" ${question.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
+                                        <option value="medium" ${question.difficulty === 'medium' ? 'selected' : ''}>Medium</option>
+                                        <option value="hard" ${question.difficulty === 'hard' ? 'selected' : ''}>Hard</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Review Notes</label>
+                                <textarea class="form-control" name="reviewNotes" rows="2">${escapeHtml(question.reviewNotes || '')}</textarea>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="needsReview" id="needsReview" ${question.needsReview ? 'checked' : ''}>
+                                <label class="form-check-label" for="needsReview">Needs Review</label>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="active" id="active" ${question.active !== false ? 'checked' : ''}>
+                                <label class="form-check-label" for="active">Active (published)</label>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="saveReview">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#reviewModal').html(modalContent).modal('show');
+        
+        // Add save handler
+        $('#saveReview').click(function() {
+            saveQuestionReview(question.id);
+        });
+    }
+    
+    function saveQuestionReview(questionId) {
+        const formData = {
+            id: questionId,
+            question: $('#reviewForm [name="question"]').val(),
+            options: [
+                $('#reviewForm [name="optionA"]').val(),
+                $('#reviewForm [name="optionB"]').val(),
+                $('#reviewForm [name="optionC"]').val(),
+                $('#reviewForm [name="optionD"]').val()
+            ],
+            correctAnswer: parseInt($('#reviewForm [name="correctAnswer"]').val()),
+            explanation: $('#reviewForm [name="explanation"]').val(),
+            difficulty: $('#reviewForm [name="difficulty"]').val(),
+            qualityScore: parseInt($('#reviewForm [name="qualityScore"]').val()),
+            reviewNotes: $('#reviewForm [name="reviewNotes"]').val(),
+            needsReview: $('#reviewForm [name="needsReview"]').is(':checked'),
+            active: $('#reviewForm [name="active"]').is(':checked')
+        };
+        
+        $.ajax({
+            url: '/admin/api/admin/questions',
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    $('#reviewModal').modal('hide');
+                    loadQuestions(); // Reload the list
+                    alert('Question updated successfully!');
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            }
+        });
+    }
+    
+    // Initialize
+    $('#filterStatus, #filterProgram, #filterCourse, #filterQuality').change(loadQuestions);
+    loadQuestions();
+}); 
+</cript>
+</body>
+</html>

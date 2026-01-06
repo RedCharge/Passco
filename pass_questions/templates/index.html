@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passco - Premium Exam Mastery</title>
+
+ <!-- ========== PWA META TAGS ========== -->
+<!-- Favicons -->
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+<link rel="icon" href="{{ url_for('static', filename='favicon-32x32.png') }}" type="image/png" sizes="32x32">
+<link rel="icon" href="{{ url_for('static', filename='favicon-16x16.png') }}" type="image/png" sizes="16x16">
+
+<!-- Apple Touch Icon -->
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+<link rel="apple-touch-icon-precomposed" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+
+<!-- Android Icons -->
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='android-chrome-192x192.png') }}">
+<link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='android-chrome-512x512.png') }}">
+
+<!-- Web App Manifest -->
+<link rel="manifest" href="{{ url_for('serve_manifest') }}">
+
+<!-- Theme Colors -->
+<meta name="theme-color" content="#4a6fa5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Past Questions">
+
+<!-- Mobile Meta -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Past Questions">
+<meta name="msapplication-TileColor" content="#4a6fa5">
+<meta name="msapplication-TileImage" content="{{ url_for('static', filename='android-chrome-144x144.png') }}">
+
+<!-- PWA Display -->
+<meta name="display" content="standalone">
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom Tailwind Configuration and Styles */
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'passco-dark': '#0f172a', /* Slate 900 */
+                        'passco-blue': '#1e293b', /* Slate 800 (for backgrounds) */
+                        'passco-accent': '#84cc16', /* Lime 500 (Electric Green) */
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    keyframes: {
+                        'pulse-glow': {
+                            '0%, 100%': { boxShadow: '0 0 0px rgba(132, 204, 22, 0.5)' },
+                            '50%': { boxShadow: '0 0 25px rgba(132, 204, 22, 0.8), 0 0 10px rgba(132, 204, 22, 0.4)' },
+                        },
+                        'float': {
+                            '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-10px) rotate(0.5deg)' },
+                        },
+                        'spin-slow': {
+                            from: { transform: 'rotate(0deg)' },
+                            to: { transform: 'rotate(360deg)' },
+                        },
+                    },
+                    animation: {
+                        'pulse-glow-slow': 'pulse-glow 5s infinite ease-in-out',
+                        'float-subtle': 'float 7s ease-in-out infinite',
+                        'spin-slow': 'spin-slow 40s linear infinite',
+                    }
+                }
+            }
+        }
+
+        /* Base styles for a sleek dark theme */
+        body {
+            background-color: #0f172a; 
+            color: #f8fafc;
+        }
+
+        /* Hero Text Gradient Effect */
+        .hero-text-gradient {
+            background-image: linear-gradient(90deg, #f8fafc, #84cc16);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* CTA Button Style */
+        .cta-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(132, 204, 22, 0.5);
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(132, 204, 22, 0.7);
+        }
+        
+        /* Feature Block Hover Effect - Subtle Inner Shadow */
+        .feature-block {
+            transition: all 0.3s ease;
+            border-left: 2px solid transparent;
+            background-color: #1e293b;
+        }
+        .feature-block:hover {
+            border-left-color: #84cc16;
+            background-color: #15202f;
+            transform: scale(1.02);
+            box-shadow: inset 0 0 10px rgba(132, 204, 22, 0.1);
+        }
+
+        /* Decorative circle element for Hero background */
+        .circle-bg {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(132, 204, 22, 0.2) 0%, rgba(15, 23, 42, 0) 70%);
+            z-index: 0;
+            opacity: 0.3;
+        }
+        
+        /* --- Background Layer for Hero Section --- */
+        #header-hero-background-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh; 
+            background-image: url('https://static.vecteezy.com/system/resources/previews/026/190/465/large_2x/abstract-hexagonal-technology-hitech-background-neon-green-black-free-photo.jpg');
+            background-size: cover;
+            background-position: center;
+            z-index: 10; 
+        }
+        
+        #header-hero-background-layer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-color: rgba(15, 23, 42, 0.75); 
+            backdrop-filter: blur(2px); 
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 11; 
+        }
+        /* --- END Background Layer CSS --- */
+        
+        /* iPhone Mockup Styling */
+        .iphone-frame {
+            /* Simulates the thick phone bezel */
+            padding: 12px; /* 1.5rem for p-1.5, slightly thicker */
+            border-radius: 40px; /* Highly rounded corners */
+            border: 5px solid rgba(71, 85, 105, 0.8); /* Slate-700/80 border */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+        
+        .iphone-screen {
+            border-radius: 30px;
+            /* Aspect ratio to make it look like a phone screen */
+            aspect-ratio: 9 / 19.5; 
+        }
+
+        .faq-item {
+            /* Subtle glow effect on hover for the FAQ items */
+            transition: box-shadow 0.3s ease;
+        }
+        .faq-item:hover {
+            box-shadow: 0 0 15px rgba(132, 204, 22, 0.1);
+        }
+        
+    </style>
+</head>
+<body class="font-sans antialiased relative"> 
+    
+    <!-- 1. Dedicated Background Layer (Must be Z-index below header and hero) -->
+    <div id="header-hero-background-layer"></div>
+    
+   <!-- 2. Navigation/Header - FIXED TO TOP AND FULL WIDTH -->
+<header id="main-header" class="fixed top-0 w-full z-50 py-4 border-b border-slate-800 bg-passco-dark/70 backdrop-blur-sm transition duration-300">
+    <nav class="flex justify-between items-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <a href="/">
+            <!-- Logo Image Only - Responsive sizing -->
+            <img 
+                src="/static/images/logo.png" 
+                alt="PASSCO Logo" 
+                class="h-10 w-auto md:h-12 w-auto object-contain"
+                onerror="this.onerror=null; this.src='https://via.placeholder.com/150x50/3B82F6/FFFFFF?text=PASSCO'"
+            >
+        </a>
+            <!-- Desktop Navigation Links -->
+            <div class="hidden md:flex space-x-10 text-lg font-medium text-slate-300">
+                <a href="#features" class="hover:text-passco-accent transition duration-300">Features</a>
+                <a href="#computer-science" class="hover:text-passco-accent transition duration-300">CS Hub</a>
+                <a href="#about" class="hover:text-passco-accent transition duration-300">About Us</a>
+                <a href="#testimonials" class="hover:text-passco-accent transition duration-300">Success</a>
+                <a href="#faq" class="hover:text-passco-accent transition duration-300">FAQ</a>
+            </div>
+            
+            <!-- Desktop CTA -->
+            <a href="/auth/login" class="hidden md:block px-5 py-2 text-passco-dark bg-passco-accent rounded-full hover:bg-lime-400 transition duration-300 font-semibold cta-button">Get Started</a>
+            
+            <!-- Mobile Menu Button -->
+            <button id="mobile-menu-button" class="md:hidden p-2 text-white focus:outline-none">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+        </nav>
+        
+        <!-- Mobile Menu (Left-aligned) -->
+        <div id="mobile-menu" class="hidden md:hidden px-4 pt-2 pb-4 space-y-2 bg-passco-dark/80 border-t border-slate-800 flex flex-col items-start">
+            <a href="#features" class="w-full py-2 px-4 text-left text-slate-300 hover:text-passco-accent transition duration-300 rounded-lg bg-passco-blue/50">Features</a>
+            <a href="#computer-science" class="w-full py-2 px-4 text-left text-slate-300 hover:text-passco-accent transition duration-300 rounded-lg bg-passco-blue/50">CS Hub</a>
+            <a href="#about" class="w-full py-2 px-4 text-left text-slate-300 hover:text-passco-accent transition duration-300 rounded-lg bg-passco-blue/50">About Us</a>
+            <a href="#testimonials" class="w-full py-2 px-4 text-left text-slate-300 hover:text-passco-accent transition duration-300 rounded-lg bg-passco-blue/50">Success</a>
+            <a href="#faq" class="w-full py-2 px-4 text-left text-slate-300 hover:text-passco-accent transition duration-300 rounded-lg bg-passco-blue/50">FAQ</a>
+            <a href="/auth/login" class="w-full mt-4 py-2 text-passco-dark bg-passco-accent rounded-lg hover:bg-lime-400 font-semibold text-center">Get Started</a>
+        </div>
+    </header>
+
+    <!-- 3. Hero Section - Content is now padded to move below the fixed header -->
+    <section id="hero-wrapper" class="relative z-20 pt-24 pb-24 sm:pb-32 min-h-screen"> 
+
+        <!-- Decorative Circles -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-10">
+            <div class="circle-bg top-0 -left-60 animate-spin-slow"></div>
+            <div class="circle-bg bottom-0 -right-60 animate-spin-slow delay-1000"></div>
+        </div>
+
+        <div id="hero" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-12 items-center relative z-20">
+            
+            <!-- Hero Text Content -->
+            <div class="space-y-6">
+                <span class="text-sm font-semibold uppercase tracking-widest text-passco-accent border border-passco-accent/50 inline-block px-3 py-1 rounded-full">LEVEL UP YOUR GRADES</span>
+                <h1 class="text-5xl sm:text-6xl lg:text-8xl font-black leading-tight sm:leading-none">
+                    Achieve <span class="hero-text-gradient">Academic Mastery</span>.
+                </h1>
+                <p class="text-lg sm:text-xl text-slate-200 max-w-lg">
+                    Passco is the essential digital tool for serious students. Access Hundreds of verified past questions with intelligent analytics to guarantee your exam success.
+                </p>
+                <a href="/auth/signup" class="inline-block w-full sm:w-auto px-12 py-4 text-xl font-bold text-passco-dark rounded-full bg-passco-accent hover:bg-lime-400 transition duration-300 mt-6 cta-button text-center">
+                    Start Today for ₵50
+                </a>
+            </div>
+
+            <!-- Hero Image Mockup (iPhone Frame) -->
+            <div class="flex justify-center md:justify-end relative p-6 mt-10 md:mt-0">
+                <!-- Outer container for rotation and float animation -->
+                <div class="relative w-full max-w-xs sm:max-w-sm lg:max-w-xs transform rotate-[-5deg] transition-transform duration-500 hover:rotate-0" 
+                     style="animation: float-subtle 7s ease-in-out infinite;">
+                    
+                    <!-- iPhone Frame Element (CSS styled for bezel, rounded corners, and shadow) -->
+                    <div class="iphone-frame bg-black mx-auto">
+                        <!-- Screen Content Area -->
+                        <div class="iphone-screen w-full overflow-hidden bg-slate-900 relative shadow-inner shadow-slate-950/50">
+                            <!-- Dynamic Island/Notch Mockup -->
+                            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-b-xl z-30"></div>
+                            
+                            <!-- App Content inside the screen - Image fills this entire container -->
+                            <div class="h-full w-full"> 
+                                <!-- Image placeholder for the chart -->
+                                <img src="https://images.unsplash.com/photo-1549419137-d0354157d6ef?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                                     alt="App Mockup showing progress and analytics"
+                                     class="w-full h-full object-cover rounded-3xl" 
+                                     onerror="this.onerror=null; this.src='https://placehold.co/400x866/0f172a/84cc16?text=Passco+App+Screen';">
+                            </div>
+                            <!-- End App Content -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Area (Solid background from here down) -->
+    <main class="relative z-20 bg-passco-dark">
+        
+        <!-- 4. Features Section -->
+        <section id="features" class="py-16 sm:py-24">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12 sm:mb-16">
+                    <h2 class="text-3xl md:text-5xl font-bold mb-4">Features Engineered for Excellence</h2>
+                    <p class="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto">We don't just offer past questions; we offer a strategic path to the top of your class.</p>
+                </div>
+
+                <!-- Features now use 2 columns on small screens and 4 on large screens -->
+                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                    <!-- Feature 1: Verified Questions -->
+                    <div class="feature-block p-6 rounded-lg">
+                        <i data-lucide="shield-check" class="w-8 h-8 text-passco-accent mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Verified Content</h3>
+                        <p class="text-slate-400 text-sm">Authored and reviewed by certified examiners for guaranteed accuracy.</p>
+                    </div>
+
+                    <!-- Feature 2: Analytics -->
+                    <div class="feature-block p-6 rounded-lg">
+                        <i data-lucide="activity-square" class="w-8 h-8 text-passco-accent mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Deep Analytics</h3>
+                        <p class="text-slate-400 text-sm">Visualize progress, identify weak subjects, and track your readiness score in real-time.</p>
+                    </div>
+
+                    <!-- Feature 3: Simulation -->
+                    <div class="feature-block p-6 rounded-lg">
+                        <i data-lucide="cpu" class="w-8 h-8 text-passco-accent mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">AI Mock Exams</h3>
+                        <p class="text-slate-400 text-sm">Generates fresh mock exams based on official syllabi and your personal learning gaps.</p>
+                    </div>
+
+                    <!-- Feature 4: Explanations -->
+                    <div class="feature-block p-6 rounded-lg">
+                        <i data-lucide="zap" class="w-8 h-8 text-passco-accent mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Instant Solutions</h3>
+                        <p class="text-slate-400 text-sm">Step-by-step reasoning for every answer, turning mistakes into learning opportunities.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4.5. COMPUTER SCIENCE SECTION -->
+        <section id="computer-science" class="py-16 sm:py-24 bg-passco-blue/70 backdrop-blur-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-12 items-center">
+                <!-- Text Content -->
+<div class="space-y-6">
+    <span class="text-sm font-semibold uppercase tracking-widest text-passco-accent">ADVANCED STUDENTS</span>
+    <h2 class="text-3xl md:text-5xl font-bold">Your Digital Edge in Technical Studies</h2>
+    <p class="text-lg text-slate-300">
+        Passco goes beyond general subjects to provide tailored support for technical and specialized programs. Master key concepts and ace your specific course exams with discipline-focused resources.
+    </p>
+    <ul class="space-y-3 text-slate-200">
+        <li class="flex items-start">
+            <i data-lucide="code" class="w-5 h-5 text-passco-accent mr-3 mt-1 flex-shrink-0"></i>
+            <div>Advanced Technical Concepts: Practice problems and explanations for specialized topics across various technical disciplines.</div>
+        </li>
+        <li class="flex items-start">
+            <i data-lucide="database" class="w-5 h-5 text-passco-accent mr-3 mt-1 flex-shrink-0"></i>
+            <div>Specialized Modules: Dedicated question banks covering advanced topics relevant to your field of study.</div>
+        </li>
+        <li class="flex items-start">
+            <i data-lucide="lock" class="w-5 h-5 text-passco-accent mr-3 mt-1 flex-shrink-0"></i>
+            <div>Industry-Relevant Skills: Focused content on practical applications and fundamental principles for technical careers.</div>
+        </li>
+    </ul>
+</div>
+                
+                <!-- Floating Image (Code/Tech Theme) -->
+                <div class="flex justify-center md:justify-start relative p-4">
+                    <div class="w-full max-w-sm rounded-xl overflow-hidden shadow-2xl bg-passco-dark/80 border border-slate-700 transform hover:scale-[1.03] transition duration-500" 
+                         style="animation: float-subtle 8s ease-in-out infinite;">
+                        
+                        <img src="https://atu.edu.gh/wp-content/uploads/2024/07/580A0381-1024x683.jpg"
+                             alt="Computer Science student resources and code screen" 
+                             class="w-full h-auto object-cover rounded-xl opacity-80"
+                             onerror="this.onerror=null; this.src='https://placehold.co/400x400/0f172a/84cc16?text=CS+RESOURCES';">
+                        
+                        <div class="p-4 text-center">
+                            <p class="text-sm text-passco-accent font-mono">LEARN SMARTER, NOT HARDER</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- 5. About Section (Asymmetrical with Image) -->
+        <section id="about" class="py-16 sm:py-24">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-12 sm:gap-16 items-center">
+                <!-- Text Content -->
+                <div class="space-y-6 order-2 md:order-1">
+                    <span class="text-sm font-semibold uppercase tracking-widest text-passco-accent">THE PASSCO DIFFERENCE</span>
+                    <h2 class="text-3xl md:text-5xl font-bold">More Than Just a Past Questions App</h2>
+                    <p class="text-lg text-slate-300">
+                        Passco was created by educators who understand the pressure of Accra Technical University exams. We noticed that high-quality, up-to-date resources were often siloed or too costly.
+                    </p>
+                    <p class="text-lg text-slate-300 border-l-4 border-passco-accent pl-4 italic">
+                        Our goal is simple: offer the most comprehensive, affordable, and intelligently designed exam preparation platform available. We empower students to study smarter, not just harder.
+                    </p>
+                </div>
+                
+                <!-- Image showing collaborative digital work -->
+                <div class="p-4 sm:p-6 bg-passco-dark rounded-xl shadow-2xl border border-slate-700 hover:shadow-passco-accent/30 transition duration-500 order-1 md:order-2">
+                    <img src="https://img.freepik.com/free-photo/students-studying-together-medium-shot_23-2148913227.jpg?semt=ais_hybrid&w=740&q=80"
+                         alt="Team collaborating on educational software" 
+                         class="w-full h-auto rounded-lg shadow-xl"
+                         onerror="this.onerror=null; this.src='https://placehold.co/600x400/0f172a/84cc16?text=Passco+Team+Vision';">
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Testimonials Section (Clean List Style) -->
+        <section id="testimonials" class="py-16 sm:py-24 bg-passco-blue/70 backdrop-blur-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12 sm:mb-16">
+                    <h2 class="text-3xl md:text-5xl font-bold mb-4">What Our High Achievers Say</h2>
+                </div>
+
+                <!-- Testimonials now stack vertically on mobile -->
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Testimonial 1: Analytics/Weak Points (BTech) -->
+                    <div class="p-8 bg-passco-dark/70 backdrop-blur-sm rounded-xl border-t-4 border-passco-accent shadow-xl testimonial-item">
+                        <i data-lucide="quote" class="w-8 h-8 text-passco-accent mb-4 opacity-50"></i>
+                        <p class="text-base sm:text-lg italic mb-4 text-slate-300">"The way Passco broke down my weaknesses in Algorithms and Data Structures was crucial. I stopped studying randomly and focused purely on what I was weak at. I aced the module."</p>
+                        <p class="font-semibold text-white">- Abena O., BTech Computer Science, ATU</p>
+                    </div>
+
+                    <!-- Testimonial 2: Structured Practice for Fashion (ATU) -->
+<div class="p-8 bg-passco-dark/70 backdrop-blur-sm rounded-xl border-t-4 border-passco-accent shadow-xl testimonial-item">
+    <i data-lucide="quote" class="w-8 h-8 text-passco-accent mb-4 opacity-50"></i>
+    <p class="text-base sm:text-lg italic mb-4 text-slate-300">"Before Passco, I struggled with pattern drafting and textile theory. The specialized question banks made my Fashion Design finals feel like just another practice session. It helped me achieve a distinction."</p>
+    <p class="font-semibold text-white">- Ama S., Fashion Design, ATU</p>
+</div>
+                    <!-- Testimonial 3: Mock Exams/Theory (BTech) -->
+                    <div class="p-8 bg-passco-dark/70 backdrop-blur-sm rounded-xl border-t-4 border-passco-accent shadow-xl testimonial-item">
+                        <i data-lucide="quote" class="w-8 h-8 text-passco-accent mb-4 opacity-50"></i>
+                        <p class="text-base sm:text-lg italic mb-4 text-slate-300">"The AI Mock Exams perfectly simulated the pressure and format of the final paper. I felt completely ready for my Operating Systems theory. Essential resource for any ATU student."</p>
+                        <p class="font-semibold text-white">- Salifu D., BTech Computer Science, ATU</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. FAQ Section -->
+        <section id="faq" class="py-16 sm:py-24">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl md:text-5xl font-bold text-center mb-12">Frequently Asked Questions</h2>
+                
+                <div class="space-y-4">
+                    <!-- FAQ Item 1 -->
+                    <div class="faq-item rounded-xl bg-passco-blue/60 border border-slate-700 overflow-hidden shadow-lg">
+                        <button class="faq-toggle flex justify-between items-center w-full p-6 text-left font-semibold text-lg text-white hover:bg-passco-blue/80 transition duration-200" data-target="faq-answer-1">
+                            Is the ₵50 a recurring subscription?
+                            <i data-lucide="chevron-down" class="faq-icon w-6 h-6 transition-transform duration-300 transform"></i>
+                        </button>
+                        <div id="faq-answer-1" class="faq-answer hidden p-6 pt-0 text-slate-300 border-t border-slate-800">
+                            <p>No, the ₵50 GHS is a one-time activation fee that grants you lifetime access to all current and future content, mock exams, and analytics features on the Passco platform. No monthly fees!</p>
+                        </div>
+                    </div>
+                    
+                    <!-- FAQ Item 2 -->
+                    <div class="faq-item rounded-xl bg-passco-blue/60 border border-slate-700 overflow-hidden shadow-lg">
+                        <button class="faq-toggle flex justify-between items-center w-full p-6 text-left font-semibold text-lg text-white hover:bg-passco-blue/80 transition duration-200" data-target="faq-answer-2">
+                            What devices can I use Passco on?
+                            <i data-lucide="chevron-down" class="faq-icon w-6 h-6 transition-transform duration-300 transform"></i>
+                        </button>
+                        <div id="faq-answer-2" class="faq-answer hidden p-6 pt-0 text-slate-300 border-t border-slate-800">
+                            <p>Passco is accessible via our native Android and iOS mobile apps, as well as any modern web browser on your desktop or tablet. Your progress syncs instantly across all devices.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- FAQ Item 3 -->
+                    <div class="faq-item rounded-xl bg-passco-blue/60 border border-slate-700 overflow-hidden shadow-lg">
+                        <button class="faq-toggle flex justify-between items-center w-full p-6 text-left font-semibold text-lg text-white hover:bg-passco-blue/80 transition duration-200" data-target="faq-answer-3">
+                            How often is the past question content updated?
+                            <i data-lucide="chevron-down" class="faq-icon w-6 h-6 transition-transform duration-300 transform"></i>
+                        </button>
+                        <div id="faq-answer-3" class="faq-answer hidden p-6 pt-0 text-slate-300 border-t border-slate-800">
+                            <p>We update our database within weeks of every major Accra Technical University Exams and other related board exams. Our team continuously verifies and adds new questions to ensure relevance.</p>
+                        </div>
+                    </div>
+
+                    <!-- FAQ Item 4 -->
+                    <div class="faq-item rounded-xl bg-passco-blue/60 border border-slate-700 overflow-hidden shadow-lg">
+                        <button class="faq-toggle flex justify-between items-center w-full p-6 text-left font-semibold text-lg text-white hover:bg-passco-blue/80 transition duration-200" data-target="faq-answer-4">
+                            Can I see detailed explanations for wrong answers?
+                            <i data-lucide="chevron-down" class="faq-icon w-6 h-6 transition-transform duration-300 transform"></i>
+                        </button>
+                        <div id="faq-answer-4" class="faq-answer hidden p-6 pt-0 text-slate-300 border-t border-slate-800">
+                            <p>Absolutely. Every single question in the Passco database is accompanied by a detailed, step-by-step explanation to help you understand the core concept, not just the correct option.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- 8. Final CTA / Pricing Section (The centerpiece) -->
+        <section id="cta" class="py-16 sm:py-24 text-center bg-passco-dark/70 backdrop-blur-sm border-t border-slate-800">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-4xl md:text-6xl font-extrabold mb-4 hero-text-gradient">Ready to Guarantee Your Success?</h2>
+                <p class="text-xl sm:text-2xl mb-12 text-slate-300">
+                    Join the exclusive community of Passco high achievers.
+                </p>
+                
+                <!-- Pricing Box with Electric Glow Animation -->
+                <div class="inline-block p-8 sm:p-10 bg-passco-blue/70 rounded-3xl border border-passco-accent shadow-2xl animation-pulse-glow-slow">
+                    <p class="text-lg font-bold text-passco-accent uppercase tracking-widest">One-Time Activation Fee</p>
+                    <p class="text-7xl sm:text-9xl font-black my-4 text-white">₵50</p>
+                    <p class="text-xl sm:text-2xl text-slate-300">GHS (Lifetime Access)</p>
+                </div>
+
+                <!-- Full-width CTA button on mobile -->
+                <button onclick="customAlert('Payment processing for Passco access (₵50 GHS) is now ready.')" 
+                        class="cta-button mt-12 w-full sm:w-auto px-16 py-5 text-xl sm:text-2xl font-bold text-passco-dark rounded-full bg-passco-accent hover:bg-lime-400 transition duration-300 transform">
+                    Secure Unlimited Access Now
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-8 text-center text-slate-500 border-t border-slate-800 bg-passco-dark/80 backdrop-blur-sm">
+        <p>&copy; 2025 Passco. All rights reserved. Premium digital learning solution.</p>
+    </footer>
+
+    <!-- Load Lucide Icons (Deferred for faster initial load) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Initialize Lucide Icons & Custom Alert/Modal -->
+    <script>
+        // Initialize icons after the script is loaded
+        lucide.createIcons();
+
+        // --- Mobile Menu Toggle Logic ---
+        const menuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        if (menuButton && mobileMenu) {
+            menuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            // Hide menu if a link is clicked (UX improvement)
+            mobileMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+        }
+
+        // --- Custom Modal / Alert Implementation ---
+        function customAlert(message) {
+            let messageBox = document.getElementById('demo-message');
+
+            if (!messageBox) {
+                messageBox = document.createElement('div');
+                messageBox.id = 'demo-message';
+                messageBox.className = 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none';
+                messageBox.innerHTML = `
+                    <div class="p-8 max-w-sm w-full text-center bg-passco-blue rounded-xl border border-passco-accent shadow-2xl">
+                        <p class="text-xl font-semibold mb-6 text-white">${message}</p>
+                        <button onclick="document.getElementById('demo-message').classList.add('opacity-0', 'pointer-events-none');" 
+                                class="px-6 py-2 bg-passco-accent text-passco-dark rounded-full hover:bg-lime-400 transition font-medium cta-button">
+                            Close
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(messageBox);
+            } else {
+                messageBox.querySelector('p').textContent = message;
+            }
+
+            // Show the modal
+            setTimeout(() => {
+                messageBox.classList.remove('opacity-0', 'pointer-events-none');
+            }, 50);
+        }
+
+        // --- FAQ Accordion Logic ---
+        document.querySelectorAll('.faq-toggle').forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-target');
+                const answer = document.getElementById(targetId);
+                const icon = button.querySelector('.faq-icon'); 
+                
+                if (!answer || !icon) {
+                    console.error("Missing FAQ answer or icon element.");
+                    return;
+                }
+
+                // Check if already open
+                const isAlreadyOpen = !answer.classList.contains('hidden');
+
+                // Closed all other answers
+                document.querySelectorAll('.faq-answer').forEach(a => {
+                    if (a !== answer) a.classList.add('hidden');
+                });
+
+                // Reset all icons 
+                document.querySelectorAll('.faq-icon').forEach(i => {
+                    if (i !== icon) i.classList.remove('rotate-180');
+                });
+
+                // Toggle the clicked one
+                if (!isAlreadyOpen) {
+                    answer.classList.remove('hidden');
+                    icon.classList.add('rotate-180');
+                } else {
+                    answer.classList.add('hidden');
+                    icon.classList.remove('rotate-180');
+                }
+            });
+        });
+    </script>
+    <!-- ========== PWA JAVASCRIPT ========== -->
+<!-- ========== FORCE PWA INSTALL DETECTION ========== -->
+<script>
+(function() {
+    console.log('🔧 Checking PWA install eligibility...');
+    
+    // 1. Register Service Worker IMMEDIATELY
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(function(registration) {
+                    console.log('✅ Service Worker registered with scope:', registration.scope);
+                    
+                    // Force service worker to take control
+                    if (registration.waiting) {
+                        registration.waiting.postMessage({type: 'SKIP_WAITING'});
+                    }
+                    
+                    // Force activation
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('🔄 New Service Worker installed');
+                                }
+                            });
+                        }
+                    });
+                })
+                .catch(function(error) {
+                    console.error('❌ Service Worker registration failed:', error);
+                });
+        });
+    }
+    
+    // 2. Listen for beforeinstallprompt event
+    let deferredPrompt;
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('🎯 beforeinstallprompt event fired! Chrome will show "Install app"');
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show in console that it's working
+        console.log('✅ Chrome will show "Install app" in menu');
+        console.log('✅ Criteria met: HTTPS, Manifest, Service Worker');
+        
+        // You can optionally show a custom install button
+        showCustomInstallPrompt();
+    });
+    
+    // 3. Track installation
+    window.addEventListener('appinstalled', (evt) => {
+        console.log('🎉 PWA installed successfully!');
+        deferredPrompt = null;
+    });
+    
+    // 4. Helper to show custom install button
+    function showCustomInstallPrompt() {
+        // Only show if not already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) return;
+        
+        // Create a subtle install hint
+        setTimeout(() => {
+            const installHint = document.createElement('div');
+            installHint.innerHTML = `
+                <div style="
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(15, 23, 42, 0.95);
+                    border: 2px solid #84cc16;
+                    border-radius: 15px;
+                    padding: 15px 25px;
+                    color: white;
+                    z-index: 9999;
+                    backdrop-filter: blur(10px);
+                    text-align: center;
+                    max-width: 90%;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                    animation: fadeInUp 0.5s ease;
+                ">
+                    <div style="margin-bottom: 10px;">
+                        <strong>📱 Install Passco App</strong>
+                    </div>
+                    <div style="font-size: 14px; color: #cbd5e1; margin-bottom: 15px;">
+                        For better experience, install as app
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button id="install-pwa-btn" style="
+                            background: linear-gradient(135deg, #84cc16, #4a6fa5);
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 25px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            flex: 1;
+                        ">Install Now</button>
+                        <button id="close-hint-btn" style="
+                            background: transparent;
+                            color: #94a3b8;
+                            border: 1px solid #475569;
+                            padding: 10px 20px;
+                            border-radius: 25px;
+                            cursor: pointer;
+                        ">Later</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(installHint);
+            
+            // Add animation style
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translate(-50%, 20px); }
+                    to { opacity: 1; transform: translate(-50%, 0); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Install button click
+            document.getElementById('install-pwa-btn').onclick = () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('User accepted install');
+                            installHint.remove();
+                        }
+                        deferredPrompt = null;
+                    });
+                }
+            };
+            
+            // Close button
+            document.getElementById('close-hint-btn').onclick = () => {
+                installHint.style.animation = 'fadeInUp 0.5s ease reverse';
+                setTimeout(() => installHint.remove(), 500);
+            };
+            
+            // Auto-remove after 30 seconds
+            setTimeout(() => {
+                if (installHint.parentNode) {
+                    installHint.style.animation = 'fadeInUp 0.5s ease reverse';
+                    setTimeout(() => installHint.remove(), 500);
+                }
+            }, 30000);
+        }, 3000); // Show after 3 seconds
+    }
+    
+    // 5. Log PWA readiness to console
+    console.log('📊 PWA Readiness Check:');
+    console.log('- HTTPS/SSL:', window.location.protocol === 'https:' || window.location.hostname === 'localhost');
+    console.log('- Manifest loaded:', !!document.querySelector('link[rel="manifest"]'));
+    console.log('- Service Worker supported:', 'serviceWorker' in navigator);
+    console.log('- Already installed:', window.matchMedia('(display-mode: standalone)').matches);
+    console.log('- Install event supported:', 'onbeforeinstallprompt' in window);
+    
+})();
+</script>
+</body>
+</html>

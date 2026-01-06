@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passco Admin Dashboard</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind for a modern dark theme with subtle neon green accents -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'accent-green': '#4ade80',      // Primary Accent Green
+                        'dark-bg': '#0f172a',           // Deep Slate Gray (Primary Background)
+                        'dark-card': '#1e293b',         // Darker Slate Gray (Used for deep elements like sidebar)
+                        'dark-border': '#334155',       // Border color (Slate 700)
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'neon-glow': '0 0 8px rgba(74, 222, 128, 0.6)', // For buttons
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)', // Glass effect shadow
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for the Glassmorphism aesthetic */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Applying a subtle linear gradient to the background for more depth */
+            background-image: linear-gradient(135deg, #0f172a 0%, #172554 100%);
+        }
+        
+        /* Glass Card Style */
+        .glass-card {
+            background-color: rgba(30, 41, 59, 0.4); /* Darker, semi-transparent base */
+            backdrop-filter: blur(10px); /* Key to the glass effect */
+            -webkit-backdrop-filter: blur(10px); /* For compatibility */
+            border: 1px solid rgba(51, 65, 85, 0.5); /* Soft, transparent border */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Stronger shadow for lift */
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: theme('colors.accent-green');
+            box-shadow: 0 10px 40px 0 rgba(74, 222, 128, 0.15); /* Subtle green hover glow */
+        }
+        
+        /* Input Field Style (Set against the glass card) */
+        .input-style {
+            background-color: rgba(15, 23, 42, 0.7); /* Opaque background-bg for high contrast text */
+            border: 1px solid theme('colors.dark-border');
+            color: theme('colors.gray.200');
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-style:focus {
+            border-color: theme('colors.accent-green');
+            box-shadow: 0 0 0 2px theme('colors.accent-green')
+        }
+
+        /* Sidebar Style */
+        .sidebar {
+            background-color: #1e293b; /* Keeping sidebar slightly more opaque for structure */
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Mobile Header Style */
+        .mobile-header {
+            background-color: #1e293b;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            /* Add backdrop blur for a subtle glass look on mobile header */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        /* Table Styles for List Section */
+        #uploadedExamsList table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 1rem; /* Rounded corners for the whole table container */
+        }
+        #uploadedExamsList thead {
+             background-color: rgba(30, 41, 59, 0.7); /* Opaque header */
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-gray-200 min-h-screen">
+
+    <!-- 1. MOBILE HEADER (Visible on small screens, hidden on large screens) -->
+    <header class="mobile-header lg:hidden sticky top-0 z-10 p-4 border-b border-dark-border">
+        <div class="flex justify-between items-center mb-4">
+             <span class="text-2xl font-extrabold tracking-wider text-accent-green">PASSCO</span>
+             <button id="menuToggle" class="text-white hover:text-accent-green">
+                 <!-- Hamburger Icon -->
+                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+             </button>
+        </div>
+
+        <!-- Mobile Navigation Menu (Hidden by default, toggled by JS) -->
+        <nav id="mobileNav" class="flex-col space-y-2 hidden">
+                <a href="{{ url_for('admin.dashboard') }}" class="flex items-center p-3 rounded-xl bg-accent-green/20 border border-accent-green/50 text-accent-green transition duration-200 group">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-10v10a1 1 0 001 1h3m-10 0v-2a1 1 0 011-1h2a1 1 0 011 1v2m-6 0h6"></path></svg>
+                    <span class="text-sm font-medium">Dashboard</span>
+                </a>
+                <a href="{{ url_for('admin.users') }}" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 text-gray-400 group-hover:text-accent-green mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M7.5 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm10 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-4.999 0h.002"></path></svg>
+                    <span class="text-sm font-medium">Members</span>
+                </a>
+                <a href="{{ url_for('admin.verification_codes') }}" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    <span class="text-sm font-medium">Verification Codes</span>
+                </a>
+                <a href="/admin/upload-questions" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 text-gray-400 group-hover:text-accent-green mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M7.5 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm10 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-4.999 0h.002"></path></svg>
+                    <span class="text-sm font-medium">Questions</span>
+                </a>
+            <a href="{{ url_for('admin.logout') }}" class="w-full text-left flex items-center p-2 rounded-lg text-red-400 hover:bg-red-900/30 transition duration-200 mt-4 border-t border-dark-border/50">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                <span class="text-sm font-medium">Logout</span>
+            </a>
+        </nav>
+    </header>
+
+    <!-- Main Dashboard Container (Flex for Desktop, Block for Mobile) -->
+    <div class="flex min-h-screen">
+
+        <!-- 2. DESKTOP SIDEBAR (Hidden on mobile, visible on large screens) -->
+        <aside class="hidden lg:flex w-64 flex-col border-r border-dark-border sidebar p-4">
+            <div class="flex items-center justify-start mb-10 h-16">
+                <span class="text-3xl font-extrabold tracking-wider text-accent-green">PASSCO</span>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 space-y-2">
+                <a href="{{ url_for('admin.dashboard') }}" class="flex items-center p-3 rounded-xl bg-accent-green/20 border border-accent-green/50 text-accent-green transition duration-200 group">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-10v10a1 1 0 001 1h3m-10 0v-2a1 1 0 011-1h2a1 1 0 011 1v2m-6 0h6"></path></svg>
+                    <span class="text-sm font-medium">Dashboard</span>
+                </a>
+                <a href="{{ url_for('admin.users') }}" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 text-gray-400 group-hover:text-accent-green mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M7.5 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm10 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-4.999 0h.002"></path></svg>
+                    <span class="text-sm font-medium">Members</span>
+                </a>
+                <a href="{{ url_for('admin.verification_codes') }}" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    <span class="text-sm font-medium">Verification Codes</span>
+                </a>
+                <a href="/admin/upload-questions" class="flex items-center p-3 rounded-xl transition duration-200 hover:bg-white/10 hover:text-accent-green group">
+                    <svg class="w-6 h-6 text-gray-400 group-hover:text-accent-green mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M7.5 14a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm10 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm-4.999 0h.002"></path></svg>
+                    <span class="text-sm font-medium">Questions</span>
+                </a>
+            </nav>
+            <!-- Logout Button -->
+            <div class="mt-8 pt-4 border-t border-dark-border">
+                 <a href="{{ url_for('admin.logout') }}" class="w-full text-left flex items-center p-3 rounded-xl text-red-400 hover:bg-red-900/30 transition duration-200">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span class="text-sm font-medium">Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- 3. MAIN CONTENT AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-8">
+            <h1 class="text-4xl font-extrabold mb-8 text-white tracking-tight">Dashboard Overview</h1>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6">
+                        {% for category, message in messages %}
+                            <div class="p-4 mb-4 rounded-xl text-sm font-semibold flex items-center justify-between 
+                                {% if category == 'success' %}bg-green-800/50 text-green-300 border border-green-700/50
+                                {% elif category == 'error' %}bg-red-800/50 text-red-300 border border-red-700/50
+                                {% elif category == 'warning' %}bg-yellow-800/50 text-yellow-300 border border-yellow-700/50
+                                {% else %}bg-blue-800/50 text-blue-300 border border-blue-700/50{% endif %}">
+                                <span>{{ message }}</span>
+                                <button onclick="this.parentElement.remove()" class="text-white/50 hover:text-white">&times;</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- 1. Admin Profile & Greeting -->
+            <div class="mb-8 p-6 rounded-2xl glass-card flex flex-col md:flex-row items-start md:items-center justify-between">
+                <div class="flex items-center">
+                    <div class="h-16 w-16 rounded-full bg-gradient-to-br from-accent-green to-green-600 flex items-center justify-center ring-2 ring-accent-green shadow-neon-glow">
+                        <span class="text-white font-bold text-xl">
+                            {% if user and user.username %}
+                                {{ user.username[:2]|upper }}
+                            {% elif user and user.email %}
+                                {{ user.email[:2]|upper }}
+                            {% else %}
+                                AD
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="ml-4">
+                        <h2 class="text-xl font-semibold">Welcome Back, 
+                            <span class="text-accent-green">
+                                {% if user and user.username %}
+                                    {{ user.username }}
+                                {% elif user and user.email %}
+                                    {{ user.email.split('@')[0] }}
+                                {% else %}
+                                    Admin
+                                {% endif %}
+                            </span>
+                        </h2>
+                        <p class="text-gray-300 text-sm">
+                            {% if user and user.email %}
+                                {{ user.email }}
+                            {% else %}
+                                Super Admin Account
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <span class="px-3 py-1 text-xs font-bold rounded-full bg-accent-green/20 text-accent-green border border-accent-green/50">
+                        Active Session
+                    </span>
+                </div>
+            </div>
+
+            <!-- 2. Stats Section (Active Paid Members) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+                <!-- Active Paid Members Card -->
+                <div class="p-6 rounded-2xl glass-card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-gray-300 font-medium text-sm">Active Paid Members</p>
+                        <svg class="w-7 h-7 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </div>
+                    <div class="mt-4">
+                        <p id="activeMembersCount" class="text-4xl font-extrabold text-white">
+                            {% if stats and stats.active_members is defined %}
+                                {{ stats.active_members }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </p>
+                        <p class="text-xs text-green-400 mt-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                            Real-time from Firebase
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Total Resources Card -->
+                <div class="p-6 rounded-2xl glass-card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-gray-300 font-medium text-sm">Total Resources</p>
+                        <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    </div>
+                    <p id="totalResourcesCount" class="text-4xl font-extrabold text-white mt-4">
+                        {% if stats and stats.total_resources is defined %}
+                            {{ stats.total_resources }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </p>
+                    <p class="text-xs text-gray-400 mt-2">
+                        Exams & Solutions in static/pdfs/
+                    </p>
+                </div>
+
+                <!-- New Signups Card -->
+                <div class="p-6 rounded-2xl glass-card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-gray-300 font-medium text-sm">New Signups (Today)</p>
+                        <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <p id="newSignupsCount" class="text-4xl font-extrabold text-white mt-4">
+                        {% if stats and stats.new_signups is defined %}
+                            {{ stats.new_signups }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </p>
+                    <p id="signupsMessage" class="text-xs text-yellow-600 mt-2">
+                        {% if stats and stats.new_signups is defined and stats.new_signups > 10 %}
+                            High engagement day!
+                        {% else %}
+                            Steady growth
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Total Users Card -->
+                <div class="p-6 rounded-2xl glass-card">
+                    <div class="flex justify-between items-center">
+                        <p class="text-gray-300 font-medium text-sm">Total Users</p>
+                        <svg class="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path></svg>
+                    </div>
+                    <p id="totalUsersCount" class="text-4xl font-extrabold text-white mt-4">
+                        {% if stats and stats.total_users is defined %}
+                            {{ stats.total_users }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </p>
+                    <p class="text-xs text-blue-400 mt-2">
+                        All registered users
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 3. Exam PDF Posting / Management Section (Form) -->
+            <div class="p-8 rounded-2xl glass-card">
+                <h3 class="text-2xl font-semibold mb-6 text-accent-green border-b border-dark-border/50 pb-3">Upload New Exam Resource</h3>
+                <p class="text-gray-400 mb-8">Post exam papers and solutions to the user dashboard. Files will be saved to <code class="bg-dark-card/50 px-2 py-1 rounded">static/pdfs/</code> and metadata stored in Firebase.</p>
+
+                <form id="pdfUploadForm" action="{{ url_for('admin.upload_exam') }}" method="POST" enctype="multipart/form-data">
+                    <!-- Manual Input Fields for Categorization -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                        <!-- Program/Faculty Input -->
+                        <div>
+                            <label for="program" class="block text-sm font-medium mb-2 text-gray-300">Program/Faculty</label>
+                            <input type="text" id="program" name="program" required
+                                class="w-full p-3 rounded-lg input-style"
+                                placeholder="e.g., Computer Science">
+                        </div>
+
+                        <!-- Course/Subject Input -->
+                        <div>
+                            <label for="course" class="block text-sm font-medium mb-2 text-gray-300">Course/Subject</label>
+                            <input type="text" id="course" name="course" required
+                                class="w-full p-3 rounded-lg input-style"
+                                placeholder="e.g., Data Structures">
+                        </div>
+
+                        <!-- University Level -->
+                        <div>
+                            <label for="level" class="block text-sm font-medium mb-2 text-gray-300">University Level</label>
+                            <select id="level" name="level" required
+                                class="w-full p-3 rounded-lg input-style">
+                                <option value="" disabled selected>Select Level</option>
+                                <option value="100">Level 100</option>
+                                <option value="200">Level 200</option>
+                                <option value="300">Level 300</option>
+                                <option value="400">Level 400</option>
+                                <option value="500">Level 500</option>
+                                <option value="600">Level 600</option>
+                                <option value="700">Level 700</option>
+                                <option value="800">Level 800</option>
+                            </select>
+                        </div>
+
+                        <!-- Semester -->
+                        <div>
+                            <label for="semester" class="block text-sm font-medium mb-2 text-gray-300">Semester</label>
+                            <select id="semester" name="semester" required
+                                class="w-full p-3 rounded-lg input-style">
+                                <option value="" disabled selected>Select Semester</option>
+                                <option value="1">First Semester</option>
+                                <option value="2">Second Semester</option>
+                                <option value="3">Third Semester</option>
+                                <option value="summer">Summer School</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Additional Info Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- Year of Exam -->
+                        <div>
+                            <label for="year" class="block text-sm font-medium mb-2 text-gray-300">Academic Year</label>
+                            <input type="text" id="year" name="year" required
+                                class="w-full p-3 rounded-lg input-style"
+                                placeholder="e.g., 2023/2024">
+                        </div>
+
+                        <!-- Exam Type -->
+                        <div>
+                            <label for="exam_type" class="block text-sm font-medium mb-2 text-gray-300">Exam Type</label>
+                            <select id="exam_type" name="exam_type" 
+                                class="w-full p-3 rounded-lg input-style">
+                                <option value="midterm">Midterm Exam</option>
+                                <option value="final" selected>Final Exam</option>
+                                <option value="quiz">Quiz</option>
+                                <option value="assignment">Assignment</option>
+                                <option value="practical">Practical</option>
+                                <option value="project">Project</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- PDF File Inputs -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        <!-- Questions PDF -->
+                        <div>
+                            <label for="questionsPdf" class="block text-sm font-medium mb-2 text-gray-300">Questions PDF File</label>
+                            <div class="flex items-center space-x-4">
+                                <input type="file" id="questionsPdf" name="questionsPdf" accept=".pdf" required
+                                    class="block w-full text-sm text-gray-400
+                                    file:mr-4 file:py-3 file:px-6
+                                    file:rounded-xl file:border-0
+                                    file:text-sm file:font-bold
+                                    file:bg-accent-green/10 file:text-accent-green
+                                    hover:file:bg-accent-green/20
+                                    cursor-pointer input-style"
+                                >
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">Exam questions paper</p>
+                        </div>
+
+                        <!-- Answers PDF -->
+                        <div>
+                            <label for="answersPdf" class="block text-sm font-medium mb-2 text-gray-300">Answers PDF File</label>
+                            <div class="flex items-center space-x-4">
+                                <input type="file" id="answersPdf" name="answersPdf" accept=".pdf" required
+                                    class="block w-full text-sm text-gray-400
+                                    file:mr-4 file:py-3 file:px-6
+                                    file:rounded-xl file:border-0
+                                    file:text-sm file:font-bold
+                                    file:bg-accent-green/10 file:text-accent-green
+                                    hover:file:bg-accent-green/20
+                                    cursor-pointer input-style"
+                                >
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">Solutions and answers</p>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="mt-8">
+                        <button type="submit" class="w-full py-3 px-6 rounded-xl font-bold bg-accent-green text-dark-bg hover:bg-green-500 shadow-neon-glow transition duration-300">
+                            <span class="flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 012 9.928M15 13l-3-3m0 0l-3 3m3-3v8"></path></svg>
+                                Upload Exam Papers
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 4. Uploaded Exams List -->
+            <div class="mt-8 p-8 rounded-2xl glass-card">
+                <h3 class="text-2xl font-semibold mb-6 text-accent-green border-b border-dark-border/50 pb-3">Recently Uploaded Exams</h3>
+                
+                <!-- Message Box for Alerts (Success/Error) -->
+                <div id="messageBox" class="mb-4">
+                    <!-- Alerts will be injected here -->
+                </div>
+
+                <!-- List/Table Container (Dynamically rendered by JS) -->
+                <div id="uploadedExamsList" class="min-h-[10rem]">
+                    <!-- Placeholder for Loading State -->
+                    <div class="text-center py-10 text-gray-500 flex flex-col items-center">
+                        <svg class="animate-spin h-8 w-8 text-accent-green mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 0 24" style="fill: currentColor; stroke: currentColor;" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading uploaded exam list...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Placeholder -->
+            <footer class="mt-12 text-center text-xs text-gray-600 border-t border-dark-border/50 pt-4">
+                Passco Admin Panel | Data integrity maintained via Firebase | &copy; 2025
+            </footer>
+
+        </main>
+    </div>
+
+    <!-- JavaScript for Dynamic Content -->
+    <script>
+        // -----------------------------------------------------------
+        // REAL-TIME STATISTICS UPDATES
+        // -----------------------------------------------------------
+        
+        /**
+         * Fetches and updates statistics in real-time
+         */
+        async function updateStats() {
+            try {
+                const response = await fetch("{{ url_for('admin.get_stats') }}");
+                const stats = await response.json();
+                
+                if (response.ok) {
+                    // Update Active Paid Members
+                    const activeMembersElement = document.getElementById('activeMembersCount');
+                    if (activeMembersElement) {
+                        activeMembersElement.textContent = stats.active_members || 0;
+                    }
+                    
+                    // Update Total Resources
+                    const totalResourcesElement = document.getElementById('totalResourcesCount');
+                    if (totalResourcesElement) {
+                        totalResourcesElement.textContent = stats.total_resources || 0;
+                    }
+                    
+                    // Update New Signups
+                    const newSignupsElement = document.getElementById('newSignupsCount');
+                    if (newSignupsElement) {
+                        newSignupsElement.textContent = stats.new_signups || 0;
+                    }
+                    
+                    // Update Total Users
+                    const totalUsersElement = document.getElementById('totalUsersCount');
+                    if (totalUsersElement) {
+                        totalUsersElement.textContent = stats.total_users || 0;
+                    }
+                    
+                    // Update signups message
+                    const signupsMessageElement = document.getElementById('signupsMessage');
+                    if (signupsMessageElement) {
+                        if (stats.new_signups > 10) {
+                            signupsMessageElement.textContent = 'High engagement day!';
+                            signupsMessageElement.className = 'text-xs text-green-400 mt-2';
+                        } else {
+                            signupsMessageElement.textContent = 'Steady growth';
+                            signupsMessageElement.className = 'text-xs text-yellow-600 mt-2';
+                        }
+                    }
+                    
+                    console.log('Stats updated successfully');
+                } else {
+                    console.error('Error fetching stats:', stats.error);
+                }
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+
+        /**
+         * Initialize real-time statistics
+         */
+        function initRealTimeStats() {
+            // Update stats immediately
+            updateStats();
+            
+            // Update stats every 30 seconds
+            setInterval(updateStats, 30000);
+            
+            // Also update stats when the page becomes visible again
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    updateStats();
+                }
+            });
+        }
+
+        // -----------------------------------------------------------
+        // UPLOADED EXAMS MANAGEMENT
+        // -----------------------------------------------------------
+        
+        /**
+         * Fetches uploaded exams from Flask API
+         */
+        async function fetchUploadedExams() {
+            try {
+                const response = await fetch("{{ url_for('admin.get_uploaded_exams') }}");
+                const exams = await response.json();
+                
+                if (response.ok) {
+                    renderExams(exams);
+                } else {
+                    console.error('Error fetching exams:', exams.error);
+                    document.getElementById('uploadedExamsList').innerHTML = 
+                        '<div class="p-6 text-center text-red-400 rounded-xl bg-dark-card/50">Error loading exams</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching exams:', error);
+                document.getElementById('uploadedExamsList').innerHTML = 
+                    '<div class="p-6 text-center text-red-400 rounded-xl bg-dark-card/50">Network error loading exams</div>';
+            }
+        }
+
+        /**
+         * Renders the list of uploaded exams
+         */
+        function renderExams(exams) {
+            const container = document.getElementById('uploadedExamsList');
+            if (!container) return;
+
+            // Clear previous list
+            container.innerHTML = '';
+            
+            if (exams.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-gray-500 rounded-xl bg-dark-card/50">No exams have been uploaded yet.</div>`;
+                return;
+            }
+
+            // --- Desktop (Table) HTML ---
+            let tableHtml = `
+                <div class="hidden lg:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-dark-border/50 rounded-xl overflow-hidden">
+                        <thead class="bg-dark-card/50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Exam Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Program</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Course</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Level</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Year</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Files</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-dark-border/50">
+            `;
+            
+            // --- Mobile (Card List) HTML ---
+            let mobileHtml = '<div class="lg:hidden space-y-4">';
+
+            exams.forEach(exam => {
+                const uploadDate = new Date(exam.uploadDate).toLocaleDateString();
+                const hasQuestions = exam.questionsFileName && exam.questionsFileName !== 'N/A';
+                const hasAnswers = exam.answersFileName && exam.answersFileName !== 'N/A';
+                
+                // Desktop row
+                tableHtml += `
+                    <tr class="bg-dark-card/20 hover:bg-dark-card/50 transition duration-150">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-accent-green">${exam.examName || exam.fileName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${exam.program}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${exam.course}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">Level ${exam.level}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${exam.year}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                            <div class="flex space-x-2">
+                                ${hasQuestions ? '<span class="px-2 py-1 bg-blue-800/50 text-blue-300 text-xs rounded">Questions</span>' : ''}
+                                ${hasAnswers ? '<span class="px-2 py-1 bg-green-800/50 text-green-300 text-xs rounded">Answers</span>' : ''}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button class="text-sm text-red-400 hover:text-red-300 transition duration-150" onclick="deleteExam('${exam.id}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+
+                // Mobile card
+                mobileHtml += `
+                    <div class="p-4 bg-dark-card/70 rounded-xl border border-dark-border/50">
+                        <p class="text-accent-green font-semibold truncate">${exam.examName || exam.fileName}</p>
+                        <div class="text-xs text-gray-400 mt-2 space-y-1">
+                            <p><strong>Program:</strong> ${exam.program}</p>
+                            <p><strong>Course:</strong> ${exam.course}</p>
+                            <p><strong>Level:</strong> Level ${exam.level}</p>
+                            <p><strong>Year:</strong> ${exam.year}</p>
+                            <p><strong>Files:</strong> 
+                                ${hasQuestions ? '📝 Questions' : ''} ${hasQuestions && hasAnswers ? '+ ' : ''} ${hasAnswers ? '✅ Answers' : ''}
+                            </p>
+                            <p><strong>Uploaded:</strong> ${uploadDate}</p>
+                        </div>
+                        <button class="mt-3 w-full py-2 text-sm rounded-lg text-red-400 border border-red-900/50 bg-red-900/10 hover:bg-red-900/30 transition duration-150" onclick="deleteExam('${exam.id}')">Delete</button>
+                    </div>
+                `;
+            });
+
+            tableHtml += `</tbody></table></div>`;
+            mobileHtml += '</div>';
+
+            container.innerHTML = tableHtml + mobileHtml;
+        }
+
+        /**
+         * Handles exam deletion
+         */
+        async function deleteExam(examId) {
+            if (!confirm('Are you sure you want to delete this exam? This will remove both the database record and the PDF files.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/delete_exam/${examId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alertMessage('Exam successfully deleted!', 'success');
+                    // Refresh the exams list
+                    fetchUploadedExams();
+                    // Update stats since total resources changed
+                    updateStats();
+                } else {
+                    alertMessage(`Error deleting exam: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                alertMessage('Network error deleting exam', 'error');
+            }
+        }
+
+        /**
+         * Displays a non-blocking alert message box.
+         */
+        function alertMessage(message, type = 'info') {
+            const container = document.getElementById('messageBox');
+            if (!container) return;
+
+            const baseClasses = "p-4 mb-4 rounded-xl text-sm font-semibold flex items-center justify-between";
+            let colorClasses = "";
+
+            if (type === 'success') {
+                colorClasses = "bg-green-800/50 text-green-300 border border-green-700/50";
+            } else if (type === 'error') {
+                colorClasses = "bg-red-800/50 text-red-300 border border-red-700/50";
+            } else {
+                 colorClasses = "bg-blue-800/50 text-blue-300 border border-blue-700/50";
+            }
+
+            // Inject the message with a close button
+            container.innerHTML = `<div class="${baseClasses} ${colorClasses}"><span>${message}</span><button onclick="document.getElementById('messageBox').innerHTML=''" class="text-white/50 hover:text-white">&times;</button></div>`;
+            
+            // Auto clear after 5 seconds
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // -----------------------------------------------------------
+        // MOBILE MENU TOGGLE LOGIC
+        // -----------------------------------------------------------
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileNav = document.getElementById('mobileNav');
+
+            if (menuToggle && mobileNav) {
+                menuToggle.addEventListener('click', () => {
+                    mobileNav.classList.toggle('hidden');
+                });
+            }
+
+            // Load uploaded exams when page loads
+            fetchUploadedExams();
+            
+            // Initialize real-time statistics
+            initRealTimeStats();
+        });
+
+        // Make deleteExam function available globally
+        window.deleteExam = deleteExam;
+    </script>
+
+</body>
+</html>
