@@ -12,7 +12,7 @@ def generate_favicons_from_your_logo():
     """
     Generate all required favicon sizes from your specific logo
     """
-    
+     
     # Your logo path
     logo_path = r"C:\Users\user\pass_question_app\pass_questions\static\images\logos.jpg"
     

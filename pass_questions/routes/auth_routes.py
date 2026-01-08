@@ -3,11 +3,41 @@ import time
 import hashlib
 import secrets
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash, current_app
+from flask_login import login_user, logout_user, login_required, current_user
 from firebase_admin import firestore
 
 auth_bp = Blueprint("auth", __name__)
 db_firestore = firestore.client()
+
+# ---------- FIREBASE USER CLASS (LOCAL COPY) ----------
+class FirebaseUser:
+    def __init__(self, uid, email, username, role, paid, session_id):
+        self.id = uid
+        self.uid = uid
+        self.email = email
+        self.username = username
+        self.role = role
+        self.paid = paid
+        self.session_id = session_id
+        
+    def get_id(self):
+        return self.id
+        
+    def is_authenticated(self):
+        # Check if session is still valid
+        user_session = session.get("user")
+        if not user_session:
+            return False
+        
+        # Check if session ID matches
+        return user_session.get("session_id") == self.session_id
+        
+    def is_active(self):
+        return True
+        
+    def is_anonymous(self):
+        return False
 
 # ---------- SESSION MANAGEMENT FUNCTIONS ----------
 def generate_session_token():
@@ -91,29 +121,31 @@ def check_session_globally():
     if not endpoint or endpoint in excluded_endpoints:
         return
     
-    user = session.get("user")
-    
-    # If no user session but trying to access protected pages, redirect to login
-    if not user:
+    # Use Flask-Login's current_user for authentication check
+    if not current_user.is_authenticated:
         if endpoint.startswith('admin.') or endpoint == 'auth.user_dashboard':
             flash("Please log in to continue", "warning")
             return redirect(url_for("auth.login"))
         return
     
-    # Validate the session
-    is_valid, message = validate_session(user)
+    # Validate the session against Firebase
+    user_session = session.get("user")
+    if not user_session:
+        logout_user()
+        flash("Your session has expired. Please log in again.", "info")
+        return redirect(url_for("auth.login"))
+    
+    is_valid, message = validate_session(user_session)
     
     if not is_valid:
-        # Clear invalid session
+        logout_user()
         session.pop("user", None)
         
-        # If it was invalidated by another login, show specific message
         if "another login" in message:
             flash("You have been logged out because you logged in from another device", "warning")
         else:
             flash("Your session has expired. Please log in again.", "info")
         
-        # Redirect to login page
         return redirect(url_for("auth.login"))
 
 # ---------- SIGNUP PAGE ----------
@@ -124,6 +156,15 @@ def signup():
 # ---------- LOGIN PAGE ----------
 @auth_bp.route("/login", methods=["GET"])
 def login():
+    if current_user.is_authenticated:
+        # Redirect based on user role and payment status
+        if current_user.role == "admin":
+            return redirect(url_for("auth.admin_dashboard"))
+        elif not current_user.paid:
+            return redirect(url_for("payment.payment_page"))
+        else:
+            return redirect(url_for("auth.user_dashboard"))
+    
     firebase_config = {
         "apiKey": os.environ.get("FIREBASE_API_KEY"),
         "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN"),
@@ -135,7 +176,7 @@ def login():
     }
     return render_template("login.html", firebase_config=firebase_config)
 
-# ---------- HANDLE LOGIN (UPDATED FOR SINGLE DEVICE) ----------
+# ---------- HANDLE LOGIN (UPDATED FOR FLASK-LOGIN) ----------
 @auth_bp.route("/login_complete", methods=["POST"])
 def login_complete():
     try:
@@ -206,7 +247,20 @@ def login_complete():
             "login_time": datetime.now().isoformat()
         }
 
-        # ✅ Correct redirect after login:
+        # Create FirebaseUser for Flask-Login
+        firebase_user = FirebaseUser(
+            uid=uid,
+            email=email,
+            username=username,
+            role=role,
+            paid=paid,
+            session_id=session_token
+        )
+        
+        # Log in with Flask-Login
+        login_user(firebase_user, remember=True)
+
+        # Determine redirect URL
         if role == "admin":
             redirect_url = url_for("auth.admin_dashboard")
         elif not paid:
@@ -218,7 +272,7 @@ def login_complete():
             "status": "success",
             "redirect": redirect_url,
             "user": session["user"],
-            "session_id": session_token  # For client-side storage
+            "session_id": session_token
         })
 
     except Exception as e:
@@ -226,48 +280,43 @@ def login_complete():
 
 # ---------- ADMIN DASHBOARD ----------
 @auth_bp.route("/admin/dashboard")
+@login_required
 def admin_dashboard():
-    user = session.get("user")
-    if not user:
-        return redirect(url_for("auth.login"))
-    if user.get("role") != "admin":
+    if current_user.role != "admin":
         return redirect(url_for("auth.user_dashboard"))
-    return render_template("dashboard_admin.html", user=user)
+    return render_template("dashboard_admin.html", user=current_user)
 
 # ---------- USER DASHBOARD ----------
 @auth_bp.route("/dashboard")
+@login_required
 def user_dashboard():
-    user = session.get("user")
-    if not user:
-        return redirect(url_for("auth.login"))
-
-    # ✅ If not paid, force payment
-    if not user.get("paid") and user.get("role") != "admin":
+    # If not paid and not admin, force payment
+    if not current_user.paid and current_user.role != "admin":
         return redirect(url_for("payment.payment_page"))
+    return render_template("dashboard_user.html", user=current_user)
 
-    return render_template("dashboard_user.html", user=user)
-
-# ---------- LOGOUT (UPDATED TO CLEAR SESSION FROM DB) ----------
+# ---------- LOGOUT (UPDATED FOR FLASK-LOGIN) ----------
 @auth_bp.route("/logout")
+@login_required
 def logout():
-    user = session.get("user")
+    uid = current_user.uid
     
-    if user:
-        uid = user.get("uid")
-        
-        # Clear session from database
-        try:
-            user_ref = db_firestore.collection("users").document(uid)
-            user_ref.update({
-                "active_session_id": None,
-                "session_created": None,
-                "device_fingerprint": None
-            })
-        except Exception as e:
-            print(f"Error clearing session from database: {e}")
+    # Clear session from database
+    try:
+        user_ref = db_firestore.collection("users").document(uid)
+        user_ref.update({
+            "active_session_id": None,
+            "session_created": None,
+            "device_fingerprint": None
+        })
+    except Exception as e:
+        print(f"Error clearing session from database: {e}")
+    
+    # Logout from Flask-Login
+    logout_user()
     
     # Clear Flask session
-    session.pop("user", None)
+    session.clear()
     flash("Logged out successfully from all devices.", "info")
     return redirect(url_for("auth.login"))
 
@@ -275,17 +324,24 @@ def logout():
 @auth_bp.route("/api/session/check", methods=["GET"])
 def check_session_api():
     """API endpoint for client-side session validation"""
-    user = session.get("user")
-    
-    if not user:
+    if not current_user.is_authenticated:
         return jsonify({"valid": False, "message": "No active session"}), 401
     
     try:
-        is_valid, message = validate_session(user)
+        user_session = session.get("user")
+        if not user_session:
+            logout_user()
+            return jsonify({
+                "valid": False, 
+                "message": "Session expired",
+                "redirect": url_for("auth.login")
+            }), 401
+        
+        is_valid, message = validate_session(user_session)
         
         if not is_valid:
-            # Clear invalid session
-            session.pop("user", None)
+            logout_user()
+            session.clear()
             return jsonify({
                 "valid": False, 
                 "message": message,
@@ -295,9 +351,9 @@ def check_session_api():
         return jsonify({
             "valid": True,
             "user": {
-                "email": user.get("email"),
-                "username": user.get("username"),
-                "role": user.get("role")
+                "email": current_user.email,
+                "username": current_user.username,
+                "role": current_user.role
             }
         })
         
@@ -307,18 +363,22 @@ def check_session_api():
 # ---------- SESSION DEBUG ----------
 @auth_bp.route("/session_debug")
 def session_debug():
-    return jsonify(session.get("user", {"message": "No active session"}))
+    return jsonify({
+        "flask_session": session.get("user", {"message": "No active session"}),
+        "flask_login": {
+            "is_authenticated": current_user.is_authenticated,
+            "user_id": current_user.get_id() if current_user.is_authenticated else None
+        }
+    })
 
 # ---------- FORCE LOGOUT FROM ALL DEVICES ----------
 @auth_bp.route("/api/force_logout_all", methods=["POST"])
+@login_required
 def force_logout_all():
     """Force logout from all devices (for testing or admin use)"""
     try:
         data = request.get_json()
-        uid = data.get("uid")
-        
-        if not uid:
-            return jsonify({"status": "error", "message": "UID required"}), 400
+        uid = data.get("uid", current_user.uid)
         
         user_ref = db_firestore.collection("users").document(uid)
         user_ref.update({
@@ -326,6 +386,11 @@ def force_logout_all():
             "session_created": None,
             "device_fingerprint": None
         })
+        
+        # If it's the current user, log them out
+        if uid == current_user.uid:
+            logout_user()
+            session.clear()
         
         return jsonify({"status": "success", "message": "Logged out from all devices"})
         
