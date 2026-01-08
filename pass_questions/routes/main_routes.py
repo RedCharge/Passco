@@ -1718,6 +1718,7 @@ def create_firestore_index():
         "https://console.firebase.google.com/project/pastquestion-3b0cc/firestore/indexes"
     ]
     
+    
     return jsonify({
         "message": "Click the links below to create Firestore indexes",
         "index_links": index_urls,
