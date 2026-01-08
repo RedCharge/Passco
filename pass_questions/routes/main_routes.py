@@ -184,11 +184,130 @@ def serve_pdf_universal(pdf_path):
         print(f"❌ Error in universal route: {str(e)}")
         return f"Error: {str(e)}", 500
 
+# ----------------- ENHANCED DELETE CHECK FUNCTION -----------------
+def is_exam_deleted_for_user(user_id, exam_id):
+    """Check if an exam has been deleted for a specific user"""
+    try:
+        db_firestore = firestore.client()
+        
+        # Check if the exam exists in admin_uploads (if not, it's deleted)
+        exam_doc = db_firestore.collection("admin_uploads").document(exam_id).get()
+        if not exam_doc.exists:
+            return True
+        
+        # Check if user has specific record that marks this exam as deleted
+        deleted_exams_ref = db_firestore.collection("user_deleted_exams").document(user_id)
+        deleted_exams_doc = deleted_exams_ref.get()
+        
+        if deleted_exams_doc.exists:
+            deleted_exams_data = deleted_exams_doc.to_dict()
+            deleted_exam_ids = deleted_exams_data.get("exam_ids", [])
+            return exam_id in deleted_exam_ids
+        
+        return False
+        
+    except Exception as e:
+        print(f"Error checking if exam is deleted: {e}")
+        return False
+
+def is_question_deleted_for_user(user_id, question_id):
+    """Check if a question has been deleted for a specific user"""
+    try:
+        db_firestore = firestore.client()
+        
+        # Check if the question exists in quiz_questions (if not, it's deleted)
+        question_doc = db_firestore.collection("quiz_questions").document(question_id).get()
+        if not question_doc.exists:
+            return True
+        
+        # Check if user has specific record that marks this question as deleted
+        deleted_questions_ref = db_firestore.collection("user_deleted_questions").document(user_id)
+        deleted_questions_doc = deleted_questions_ref.get()
+        
+        if deleted_questions_doc.exists:
+            deleted_questions_data = deleted_questions_doc.to_dict()
+            deleted_question_ids = deleted_questions_data.get("question_ids", [])
+            return question_id in deleted_question_ids
+        
+        return False
+        
+    except Exception as e:
+        print(f"Error checking if question is deleted: {e}")
+        return False
+
+def update_user_deleted_exams(user_id, exam_id):
+    """Mark an exam as deleted for a specific user"""
+    try:
+        db_firestore = firestore.client()
+        deleted_exams_ref = db_firestore.collection("user_deleted_exams").document(user_id)
+        deleted_exams_doc = deleted_exams_ref.get()
+        
+        current_time = datetime.now()
+        
+        if deleted_exams_doc.exists:
+            deleted_exams_data = deleted_exams_doc.to_dict()
+            deleted_exam_ids = deleted_exams_data.get("exam_ids", [])
+            
+            if exam_id not in deleted_exam_ids:
+                deleted_exam_ids.append(exam_id)
+                deleted_exams_ref.update({
+                    "exam_ids": deleted_exam_ids,
+                    "last_updated": current_time,
+                    "updated_count": firestore.Increment(1)
+                })
+        else:
+            deleted_exams_ref.set({
+                "user_id": user_id,
+                "exam_ids": [exam_id],
+                "created_at": current_time,
+                "last_updated": current_time,
+                "updated_count": 1
+            })
+        
+        print(f"✅ Marked exam {exam_id} as deleted for user {user_id}")
+        
+    except Exception as e:
+        print(f"Error updating user deleted exams: {e}")
+
+def update_user_deleted_questions(user_id, question_id):
+    """Mark a question as deleted for a specific user"""
+    try:
+        db_firestore = firestore.client()
+        deleted_questions_ref = db_firestore.collection("user_deleted_questions").document(user_id)
+        deleted_questions_doc = deleted_questions_ref.get()
+        
+        current_time = datetime.now()
+        
+        if deleted_questions_doc.exists:
+            deleted_questions_data = deleted_questions_doc.to_dict()
+            deleted_question_ids = deleted_questions_data.get("question_ids", [])
+            
+            if question_id not in deleted_question_ids:
+                deleted_question_ids.append(question_id)
+                deleted_questions_ref.update({
+                    "question_ids": deleted_question_ids,
+                    "last_updated": current_time,
+                    "updated_count": firestore.Increment(1)
+                })
+        else:
+            deleted_questions_ref.set({
+                "user_id": user_id,
+                "question_ids": [question_id],
+                "created_at": current_time,
+                "last_updated": current_time,
+                "updated_count": 1
+            })
+        
+        print(f"✅ Marked question {question_id} as deleted for user {user_id}")
+        
+    except Exception as e:
+        print(f"Error updating user deleted questions: {e}")
+
 # ----------------- API: GET EXAMS FOR USERS - ENHANCED VERSION -----------------
 @main_bp.route("/api/exams")
 @require_login_route
 def get_exams_for_users():
-    """API endpoint to get all exams for users - ENHANCED VERSION"""
+    """API endpoint to get all exams for users - ENHANCED VERSION with deletion sync"""
     user = session.get("user")
     
     # Check if user has paid
@@ -196,6 +315,7 @@ def get_exams_for_users():
         return jsonify({"error": "Payment required"}), 403
 
     try:
+        user_id = user.get("uid")
         db_firestore = firestore.client()
         
         # Get exams from Firestore
@@ -249,6 +369,11 @@ def get_exams_for_users():
                         clean_exam[key] = value
                     else:
                         clean_exam[key] = ""
+                
+                # NEW: Check if this exam is marked as deleted for this user
+                if is_exam_deleted_for_user(user_id, doc.id):
+                    print(f"⚠️ Exam {doc.id} marked as deleted for user {user_id}")
+                    continue  # Skip this exam
                 
                 exams.append(clean_exam)
                 
@@ -573,10 +698,7 @@ def debug_pdf_test():
         "all_pdfs": list_all_pdfs()
     })
     
-    
-    
-    
-   # ----------------- ANALYTICS & QUIZ ROUTES (FIXED VERSION) -----------------
+# ----------------- ANALYTICS & QUIZ ROUTES (FIXED VERSION) -----------------
 
 @main_bp.route("/api/quiz/questions")
 @require_login_route
@@ -648,6 +770,11 @@ def get_quiz_questions():
     # Get all questions
     all_questions = []
     for doc in questions_ref.stream():
+        # NEW: Check if this question is marked as deleted for this user
+        if is_question_deleted_for_user(user_id, doc.id):
+            print(f"⚠️ Question {doc.id} marked as deleted for user {user_id}")
+            continue  # Skip deleted questions
+        
         question_data = doc.to_dict()
         question_data["id"] = doc.id
         all_questions.append(question_data)
@@ -693,10 +820,9 @@ def get_quiz_questions():
         safe_question = question.copy()
         if "correctAnswer" in safe_question:
             del safe_question["correctAnswer"]
-        yield safe_question
     
     # Return as list
-    return jsonify(list(selected_questions))
+    return jsonify(selected_questions)
 
 @main_bp.route("/api/submit-quiz-results", methods=["POST"])
 @require_login_route
@@ -1491,6 +1617,89 @@ def reset_analytics():
             "success": True,
             "message": "Analytics data reset successfully",
             "deleted_history": deleted_count
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+# ----------------- NEW: SYNC DELETIONS FROM ADMIN -----------------
+
+@main_bp.route("/api/sync-deletions", methods=["POST"])
+@require_login_route
+def sync_deletions():
+    """Synchronize deletions from admin to user account"""
+    user = session.get("user")
+    if not user:
+        return jsonify({"error": "User not authenticated"}), 401
+    
+    user_id = user.get('uid')
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    deleted_exams = data.get("deleted_exams", [])
+    deleted_questions = data.get("deleted_questions", [])
+    
+    db_firestore = firestore.client()
+    
+    try:
+        # Sync deleted exams
+        if deleted_exams:
+            for exam_id in deleted_exams:
+                update_user_deleted_exams(user_id, exam_id)
+        
+        # Sync deleted questions
+        if deleted_questions:
+            for question_id in deleted_questions:
+                update_user_deleted_questions(user_id, question_id)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Synced {len(deleted_exams)} exam deletions and {len(deleted_questions)} question deletions"
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@main_bp.route("/api/check-deletions")
+@require_login_route
+def check_deletions():
+    """Check which items have been deleted for the current user"""
+    user = session.get("user")
+    if not user:
+        return jsonify({"error": "User not authenticated"}), 401
+    
+    user_id = user.get('uid')
+    db_firestore = firestore.client()
+    
+    try:
+        # Get deleted exams
+        deleted_exams = []
+        deleted_exams_ref = db_firestore.collection("user_deleted_exams").document(user_id).get()
+        if deleted_exams_ref.exists:
+            deleted_exams_data = deleted_exams_ref.to_dict()
+            deleted_exams = deleted_exams_data.get("exam_ids", [])
+        
+        # Get deleted questions
+        deleted_questions = []
+        deleted_questions_ref = db_firestore.collection("user_deleted_questions").document(user_id).get()
+        if deleted_questions_ref.exists:
+            deleted_questions_data = deleted_questions_ref.to_dict()
+            deleted_questions = deleted_questions_data.get("question_ids", [])
+        
+        return jsonify({
+            "success": True,
+            "deleted_exams": deleted_exams,
+            "deleted_questions": deleted_questions,
+            "exam_count": len(deleted_exams),
+            "question_count": len(deleted_questions)
         })
         
     except Exception as e:

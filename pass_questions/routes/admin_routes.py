@@ -418,6 +418,35 @@ def delete_exam(exam_id):
             os.remove(answers_path)
             deleted_files.append("answers PDF")
         
+        # NEW: Delete exam data from user_exams collection
+        try:
+            # Find all user exams that reference this exam_id
+            user_exams_ref = db.collection("user_exams").where("exam_id", "==", exam_id).stream()
+            
+            deleted_user_exams = 0
+            for user_exam_doc in user_exams_ref:
+                db.collection("user_exams").document(user_exam_doc.id).delete()
+                deleted_user_exams += 1
+            
+            print(f"Deleted {deleted_user_exams} user exam records")
+        except Exception as e:
+            print(f"Error deleting user exam records: {e}")
+        
+        # NEW: Delete exam data from user_practice collection
+        try:
+            # Find all practice sessions that reference this exam
+            user_practice_ref = db.collection("user_practice").where("exam_id", "==", exam_id).stream()
+            
+            deleted_practice_sessions = 0
+            for practice_doc in user_practice_ref:
+                db.collection("user_practice").document(practice_doc.id).delete()
+                deleted_practice_sessions += 1
+            
+            print(f"Deleted {deleted_practice_sessions} practice session records")
+        except Exception as e:
+            print(f"Error deleting practice session records: {e}")
+        
+        # Delete the main exam document
         db.collection("admin_uploads").document(exam_id).delete()
         
         message = f"Exam deleted successfully"
@@ -628,10 +657,65 @@ def manage_questions():
                 return jsonify({"error": "Question ID required", "success": False}), 400
             
             try:
+                # NEW: Delete question from user quiz attempts
+                try:
+                    # Find all quiz attempts that include this question
+                    user_attempts_ref = db_firestore.collection("user_quiz_attempts").stream()
+                    
+                    deleted_attempts = 0
+                    for attempt_doc in user_attempts_ref:
+                        attempt_data = attempt_doc.to_dict()
+                        questions_list = attempt_data.get("questions", [])
+                        
+                        # Remove the question if it exists in the attempt
+                        updated_questions = []
+                        question_removed = False
+                        
+                        for q in questions_list:
+                            if isinstance(q, dict) and q.get("questionId") == question_id:
+                                question_removed = True
+                                continue
+                            updated_questions.append(q)
+                        
+                        # If question was removed, update the attempt
+                        if question_removed:
+                            db_firestore.collection("user_quiz_attempts").document(attempt_doc.id).update({
+                                "questions": updated_questions
+                            })
+                            deleted_attempts += 1
+                    
+                    print(f"Removed question from {deleted_attempts} user quiz attempts")
+                except Exception as e:
+                    print(f"Error updating user quiz attempts: {e}")
+                
+                # NEW: Delete question from practice sessions
+                try:
+                    # Find all practice sessions that include this question
+                    practice_sessions_ref = db_firestore.collection("user_practice").stream()
+                    
+                    updated_sessions = 0
+                    for session_doc in practice_sessions_ref:
+                        session_data = session_doc.to_dict()
+                        session_questions = session_data.get("questions", [])
+                        
+                        # Remove the question if it exists in the session
+                        if question_id in session_questions:
+                            session_questions.remove(question_id)
+                            db_firestore.collection("user_practice").document(session_doc.id).update({
+                                "questions": session_questions
+                            })
+                            updated_sessions += 1
+                    
+                    print(f"Removed question from {updated_sessions} practice sessions")
+                except Exception as e:
+                    print(f"Error updating practice sessions: {e}")
+                
+                # Delete the question from quiz_questions collection
                 db_firestore.collection("quiz_questions").document(question_id).delete()
+                
                 return jsonify({
                     "success": True,
-                    "message": "Question deleted successfully"
+                    "message": "Question deleted successfully from admin and user pages"
                 })
                 
             except Exception as e:
@@ -1423,7 +1507,7 @@ def get_questions_for_users():
             "questions": questions,
             "count": len(questions)
         })
-        
+    
     except Exception as e:
         print(f"Error fetching questions for users: {e}")
         return jsonify({
