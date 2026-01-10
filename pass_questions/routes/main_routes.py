@@ -7,7 +7,30 @@ from urllib.parse import quote, unquote
 from datetime import datetime, timedelta
 import random
 
+# Add Cloud Run specific configuration
+IS_CLOUD_RUN = os.environ.get('K_SERVICE') is not None
 main_bp = Blueprint("main", __name__)
+
+# Add this near the top after the decorator definition
+def get_session_config():
+    """Get appropriate session configuration for environment"""
+    if IS_CLOUD_RUN:
+        # For Cloud Run, use a more secure session configuration
+        return {
+            'SESSION_TYPE': 'filesystem',
+            'SESSION_FILE_DIR': '/tmp/flask_session',
+            'SESSION_PERMANENT': False,
+            'SESSION_USE_SIGNER': True,
+            'SESSION_KEY_PREFIX': 'pass_questions_',
+            'PERMANENT_SESSION_LIFETIME': timedelta(hours=12)
+        }
+    else:
+        # Local development
+        return {
+            'SECRET_KEY': os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key'),
+            'SESSION_TYPE': 'filesystem',
+            'SESSION_PERMANENT': False
+        }
 
 def require_login_route(func):
     """Decorator to check if user is logged in via session."""
@@ -20,6 +43,8 @@ def require_login_route(func):
             return redirect(url_for("auth.login"))
         return func(*args, **kwargs)
     return wrapper
+
+
 
 # Safe data processor for Firebase
 def safe_process_firebase_data(data):
@@ -99,16 +124,27 @@ def serve_pdf_static(filename):
         
         print(f"📁 Serving PDF: {decoded_filename}")
         
-        # Construct absolute path for verification
-        pdf_root = os.path.join(os.getcwd(), "static", "pdfs")
-        full_path = os.path.join(pdf_root, decoded_filename)
+        # CLOUD RUN COMPATIBILITY: Try multiple possible locations
+        possible_roots = [
+            os.path.join(os.getcwd(), "static", "pdfs"),  # Local development
+            "/app/static/pdfs",  # Cloud Run default
+            "/tmp/static/pdfs",  # Cloud Run tmp directory
+            os.path.join(os.environ.get('APP_HOME', '/app'), 'static', 'pdfs'),  # Environment variable
+        ]
         
-        print(f"📁 Looking for: {full_path}")
-        print(f"📁 File exists: {os.path.exists(full_path)}")
+        found_path = None
+        for pdf_root in possible_roots:
+            full_path = os.path.join(pdf_root, decoded_filename)
+            print(f"🔍 Checking path: {full_path}")
+            if os.path.exists(full_path):
+                found_path = full_path
+                break
         
-        if os.path.exists(full_path):
+        if found_path:
             # Use send_file for reliable serving
-            response = send_file(full_path, as_attachment=False)
+            response = send_file(found_path, as_attachment=False)
+            # Add caching headers for better performance in Cloud Run
+            response.headers['Cache-Control'] = 'public, max-age=300'
             print(f"✅ PDF served successfully via send_file: {decoded_filename}")
             return response
         else:
@@ -116,6 +152,7 @@ def serve_pdf_static(filename):
             found_path = find_pdf_in_nested_directories(decoded_filename)
             if found_path:
                 response = send_file(found_path, as_attachment=False)
+                response.headers['Cache-Control'] = 'public, max-age=300'
                 print(f"✅ PDF found in nested directory: {found_path}")
                 return response
             else:
@@ -129,33 +166,50 @@ def serve_pdf_static(filename):
         return f"Error serving PDF: {str(e)}", 500
 
 def find_pdf_in_nested_directories(filename):
-    """Search for PDF file in nested directories"""
-    pdf_root = os.path.join(os.getcwd(), "static", "pdfs")
+    """Search for PDF file in nested directories - Cloud Run compatible"""
+    # Try multiple possible root directories
+    possible_roots = [
+        os.path.join(os.getcwd(), "static", "pdfs"),
+        "/app/static/pdfs",
+        "/tmp/static/pdfs",
+        os.path.join(os.environ.get('APP_HOME', '/app'), 'static', 'pdfs'),
+    ]
     
-    for root, dirs, files in os.walk(pdf_root):
-        for file in files:
-            if file.lower() == filename.lower() or file.lower() == filename.replace(' ', '_').lower():
-                full_path = os.path.join(root, file)
-                print(f"🔍 Found matching file: {full_path}")
-                return full_path
+    for pdf_root in possible_roots:
+        if not os.path.exists(pdf_root):
+            continue
+            
+        for root, dirs, files in os.walk(pdf_root):
+            for file in files:
+                if file.lower() == filename.lower() or file.lower() == filename.replace(' ', '_').lower():
+                    full_path = os.path.join(root, file)
+                    print(f"🔍 Found matching file: {full_path}")
+                    return full_path
     
     return None
 
 def list_all_pdfs():
-    """List all PDF files in the system for debugging"""
-    pdf_root = os.path.join(os.getcwd(), "static", "pdfs")
+    """List all PDF files in the system for debugging - Cloud Run compatible"""
+    possible_roots = [
+        os.path.join(os.getcwd(), "static", "pdfs"),
+        "/app/static/pdfs",
+        "/tmp/static/pdfs",
+        os.path.join(os.environ.get('APP_HOME', '/app'), 'static', 'pdfs'),
+    ]
+    
     pdf_files = []
     
-    if not os.path.exists(pdf_root):
-        return ["PDF directory not found"]
+    for pdf_root in possible_roots:
+        if not os.path.exists(pdf_root):
+            continue
+            
+        for root, dirs, files in os.walk(pdf_root):
+            for file in files:
+                if file.lower().endswith('.pdf'):
+                    rel_path = os.path.relpath(os.path.join(root, file), pdf_root)
+                    pdf_files.append(rel_path.replace('\\', '/'))
     
-    for root, dirs, files in os.walk(pdf_root):
-        for file in files:
-            if file.lower().endswith('.pdf'):
-                rel_path = os.path.relpath(os.path.join(root, file), pdf_root)
-                pdf_files.append(rel_path.replace('\\', '/'))
-    
-    return pdf_files
+    return pdf_files if pdf_files else ["PDF directory not found in any location"]
 
 # ----------------- ALTERNATIVE PDF ROUTE -----------------
 @main_bp.route("/pdf/<path:pdf_path>")
@@ -446,127 +500,137 @@ def convert_file_path_to_url(file_path, program="", course="", year="", level=""
     return f"/static/pdfs/{encoded_path}"
 
 def scan_filesystem_for_pdfs_enhanced():
-    """Enhanced filesystem scan that properly handles nested directories"""
-    pdf_root = os.path.join("static", "pdfs")
+    """Enhanced filesystem scan that properly handles nested directories - Cloud Run compatible"""
+    # Try multiple possible locations
+    possible_roots = [
+        os.path.join("static", "pdfs"),
+        "/app/static/pdfs",
+        "/tmp/static/pdfs",
+        os.path.join(os.environ.get('APP_HOME', '/app'), 'static', 'pdfs'),
+    ]
+    
     pdf_files = []
     
-    if not os.path.exists(pdf_root):
-        print(f"❌ PDF directory not found: {pdf_root}")
-        return pdf_files
-    
-    try:
-        print(f"🔍 Enhanced scanning for PDFs in: {pdf_root}")
-        
-        for root, dirs, files in os.walk(pdf_root):
-            for file in files:
-                if file.lower().endswith(".pdf"):
-                    full_path = os.path.join(root, file)
-                    
-                    # Get relative path from static/pdfs
-                    relative_path = os.path.relpath(full_path, "static/pdfs")
-                    web_path = f"/static/pdfs/{quote(relative_path.replace('\\', '/'))}"
-                    
-                    # Extract metadata from directory structure
-                    path_parts = full_path.split(os.sep)
-                    
-                    # Initialize with safe defaults
-                    program = "Unknown Program"
-                    course = "Unknown Course"
-                    year = "2024"
-                    level = "100"
-                    semester = "1"
-                    exam_type = "final"
-                    
-                    try:
-                        # Enhanced metadata extraction from path structure
-                        if "pdfs" in path_parts:
-                            pdfs_index = path_parts.index("pdfs")
-                            
-                            # Program (CS BTECH)
-                            if len(path_parts) > pdfs_index + 1:
-                                program = path_parts[pdfs_index + 1]
-                                # Clean up program name
-                                if "CS" in program.upper():
-                                    program = "CS BTech"
-                            
-                            # Level (Level_100)
-                            if len(path_parts) > pdfs_index + 2:
-                                level_part = path_parts[pdfs_index + 2]
-                                if "level" in level_part.lower():
-                                    level = level_part.split('_')[-1] if '_' in level_part else "100"
-                                elif any(char.isdigit() for char in level_part):
-                                    # Extract numbers from level string
-                                    level = ''.join(filter(str.isdigit, level_part)) or "100"
-                            
-                            # Semester (Semester_1)
-                            if len(path_parts) > pdfs_index + 3:
-                                semester_part = path_parts[pdfs_index + 3]
-                                if "semester" in semester_part.lower():
-                                    semester = semester_part.split('_')[-1] if '_' in semester_part else "1"
-                                elif any(char.isdigit() for char in semester_part):
-                                    semester = ''.join(filter(str.isdigit, semester_part)) or "1"
-                            
-                            # Course (Com skills)
-                            if len(path_parts) > pdfs_index + 4:
-                                course = path_parts[pdfs_index + 4]
-                            
-                            # Year (2024)
-                            if len(path_parts) > pdfs_index + 5:
-                                year = path_parts[pdfs_index + 5]
-                                # Extract year if it contains numbers
-                                if any(char.isdigit() for char in year):
-                                    year = ''.join(filter(str.isdigit, year)) or "2024"
-                            
-                    except Exception as e:
-                        print(f"Error parsing path structure: {e}")
-                    
-                    # Determine if it's questions or answers from filename
-                    filename_lower = file.lower()
-                    file_display_name = os.path.splitext(file)[0]  # Remove .pdf extension
-                    
-                    if any(keyword in filename_lower for keyword in ["question", "exam", "paper", "midterm", "final"]):
-                        exam_type = "questions"
-                        questions_path = web_path
-                        answers_path = ""
-                        display_name = f"{course} Questions - {year}"
-                    elif any(keyword in filename_lower for keyword in ["answer", "solution", "key"]):
-                        exam_type = "answers"
-                        questions_path = ""
-                        answers_path = web_path
-                        display_name = f"{course} Answers - {year}"
-                    else:
-                        # If we can't determine, treat as questions
-                        exam_type = "questions"
-                        questions_path = web_path
-                        answers_path = ""
-                        display_name = f"{course} - {year}"
-                    
-                    # Create enhanced PDF object
-                    pdf_obj = {
-                        "id": f"fs-{len(pdf_files)}",
-                        "program": program,
-                        "course": course,
-                        "year": year,
-                        "level": level,
-                        "semester": semester,
-                        "exam_type": exam_type,
-                        "questionsFilePath": questions_path,
-                        "answersFilePath": answers_path,
-                        "questionsFileName": file_display_name if questions_path else "",
-                        "answersFileName": file_display_name if answers_path else "",
-                        "uploadDate": "",
-                        "uploadedByName": "System",
-                        "displayName": display_name,
-                        "fullPath": web_path
-                    }
-                    
-                    pdf_files.append(pdf_obj)
-                    print(f"✅ Found PDF: {web_path} -> {program}/{course}/{year}")
+    for pdf_root in possible_roots:
+        if not os.path.exists(pdf_root):
+            print(f"⚠️ PDF directory not found: {pdf_root}")
+            continue
+            
+        try:
+            print(f"🔍 Enhanced scanning for PDFs in: {pdf_root}")
+            
+            for root, dirs, files in os.walk(pdf_root):
+                for file in files:
+                    if file.lower().endswith(".pdf"):
+                        full_path = os.path.join(root, file)
                         
-    except Exception as e:
-        print(f"❌ Error scanning filesystem: {e}")
+                        # Get relative path from current pdf_root
+                        relative_path = os.path.relpath(full_path, pdf_root)
+                        web_path = f"/static/pdfs/{quote(relative_path.replace('\\', '/'))}"
+                        
+                        # Extract metadata from directory structure
+                        path_parts = full_path.split(os.sep)
+                        
+                        # Initialize with safe defaults
+                        program = "Unknown Program"
+                        course = "Unknown Course"
+                        year = "2024"
+                        level = "100"
+                        semester = "1"
+                        exam_type = "final"
+                        
+                        try:
+                            # Enhanced metadata extraction from path structure
+                            for i, part in enumerate(path_parts):
+                                if part.lower() == "pdfs" or part.endswith("_pdfs"):
+                                    pdfs_index = i
+                                    
+                                    # Program (CS BTECH)
+                                    if len(path_parts) > pdfs_index + 1:
+                                        program = path_parts[pdfs_index + 1]
+                                        # Clean up program name
+                                        if "CS" in program.upper():
+                                            program = "CS BTech"
+                                    
+                                    # Level (Level_100)
+                                    if len(path_parts) > pdfs_index + 2:
+                                        level_part = path_parts[pdfs_index + 2]
+                                        if "level" in level_part.lower():
+                                            level = level_part.split('_')[-1] if '_' in level_part else "100"
+                                        elif any(char.isdigit() for char in level_part):
+                                            # Extract numbers from level string
+                                            level = ''.join(filter(str.isdigit, level_part)) or "100"
+                                    
+                                    # Semester (Semester_1)
+                                    if len(path_parts) > pdfs_index + 3:
+                                        semester_part = path_parts[pdfs_index + 3]
+                                        if "semester" in semester_part.lower():
+                                            semester = semester_part.split('_')[-1] if '_' in semester_part else "1"
+                                        elif any(char.isdigit() for char in semester_part):
+                                            semester = ''.join(filter(str.isdigit, semester_part)) or "1"
+                                    
+                                    # Course (Com skills)
+                                    if len(path_parts) > pdfs_index + 4:
+                                        course = path_parts[pdfs_index + 4]
+                                    
+                                    # Year (2024)
+                                    if len(path_parts) > pdfs_index + 5:
+                                        year = path_parts[pdfs_index + 5]
+                                        # Extract year if it contains numbers
+                                        if any(char.isdigit() for char in year):
+                                            year = ''.join(filter(str.isdigit, year)) or "2024"
+                                    
+                        except Exception as e:
+                            print(f"Error parsing path structure: {e}")
+                        
+                        # Determine if it's questions or answers from filename
+                        filename_lower = file.lower()
+                        file_display_name = os.path.splitext(file)[0]  # Remove .pdf extension
+                        
+                        if any(keyword in filename_lower for keyword in ["question", "exam", "paper", "midterm", "final"]):
+                            exam_type = "questions"
+                            questions_path = web_path
+                            answers_path = ""
+                            display_name = f"{course} Questions - {year}"
+                        elif any(keyword in filename_lower for keyword in ["answer", "solution", "key"]):
+                            exam_type = "answers"
+                            questions_path = ""
+                            answers_path = web_path
+                            display_name = f"{course} Answers - {year}"
+                        else:
+                            # If we can't determine, treat as questions
+                            exam_type = "questions"
+                            questions_path = web_path
+                            answers_path = ""
+                            display_name = f"{course} - {year}"
+                        
+                        # Create enhanced PDF object
+                        pdf_obj = {
+                            "id": f"fs-{len(pdf_files)}",
+                            "program": program,
+                            "course": course,
+                            "year": year,
+                            "level": level,
+                            "semester": semester,
+                            "exam_type": exam_type,
+                            "questionsFilePath": questions_path,
+                            "answersFilePath": answers_path,
+                            "questionsFileName": file_display_name if questions_path else "",
+                            "answersFileName": file_display_name if answers_path else "",
+                            "uploadDate": "",
+                            "uploadedByName": "System",
+                            "displayName": display_name,
+                            "fullPath": web_path
+                        }
+                        
+                        pdf_files.append(pdf_obj)
+                        print(f"✅ Found PDF: {web_path} -> {program}/{course}/{year}")
+                            
+        except Exception as e:
+            print(f"❌ Error scanning filesystem {pdf_root}: {e}")
+            continue
     
-    print(f"📊 Total PDFs found: {len(pdf_files)}")
+    print(f"📊 Total PDFs found across all locations: {len(pdf_files)}")
     return pdf_files
 
 # ----------------- DIRECT PDF VIEWER ROUTE -----------------
@@ -655,7 +719,7 @@ def get_exams_data():
 # ----------------- DEBUG & TESTING ENDPOINTS -----------------
 @main_bp.route("/api/debug/pdf-test")
 def debug_pdf_test():
-    """Test PDF serving with various paths"""
+    """Test PDF serving with various paths - Cloud Run version"""
     # Test with your specific file path
     test_cases = [
         "questions_Plastic_Pollution_Project_Diaries_today.pdf",
@@ -664,11 +728,26 @@ def debug_pdf_test():
     ]
     
     results = []
-    pdf_root = os.path.join("static", "pdfs")
+    
+    # Check multiple possible locations
+    possible_roots = [
+        os.path.join("static", "pdfs"),
+        "/app/static/pdfs",
+        "/tmp/static/pdfs",
+        os.path.join(os.environ.get('APP_HOME', '/app'), 'static', 'pdfs'),
+    ]
     
     for test_path in test_cases:
-        full_path = os.path.join(pdf_root, test_path)
-        exists = os.path.exists(full_path)
+        exists_in_locations = []
+        
+        for pdf_root in possible_roots:
+            full_path = os.path.join(pdf_root, test_path)
+            exists = os.path.exists(full_path)
+            exists_in_locations.append({
+                "location": pdf_root,
+                "exists": exists,
+                "path": full_path
+            })
         
         static_url = f"/static/pdfs/{quote(test_path)}"
         universal_url = f"/pdf/{quote(test_path)}"
@@ -678,22 +757,32 @@ def debug_pdf_test():
         try:
             response = serve_pdf_static(test_path)
             flask_serves = True
-        except:
+        except Exception as e:
             flask_serves = False
+            flask_error = str(e)
         
         results.append({
             "test_path": test_path,
-            "full_path": full_path,
-            "absolute_path": os.path.abspath(full_path),
-            "exists": exists,
+            "exists_in_locations": exists_in_locations,
             "flask_serves": flask_serves,
+            "flask_error": flask_error if not flask_serves else None,
             "static_url": static_url,
             "universal_url": universal_url,
             "view_url": view_url
         })
     
+    # Add Cloud Run environment info
+    cloud_run_info = {
+        "K_SERVICE": os.environ.get('K_SERVICE'),
+        "K_REVISION": os.environ.get('K_REVISION'),
+        "PORT": os.environ.get('PORT'),
+        "IS_CLOUD_RUN": IS_CLOUD_RUN,
+        "Current Directory": os.getcwd(),
+        "Files in static/pdfs": list_all_pdfs()[:10]  # First 10 files
+    }
+    
     return jsonify({
-        "pdf_root": pdf_root,
+        "cloud_run_info": cloud_run_info,
         "test_results": results,
         "all_pdfs": list_all_pdfs()
     })
@@ -1724,3 +1813,14 @@ def create_firestore_index():
         "index_links": index_urls,
         "instructions": "Index creation can take 2-5 minutes. Use the fixed endpoints above while indexes are building."
     })
+    
+# ----------------- CLOUD RUN HEALTH CHECK -----------------
+@main_bp.route("/health")
+def health_check():
+    """Health check endpoint required for Cloud Run"""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "service": os.environ.get('K_SERVICE', 'unknown'),
+        "revision": os.environ.get('K_REVISION', 'unknown')
+    }), 200    

@@ -1,0 +1,18 @@
+# .gcloudignore
+.git
+.gitignore
+README.md
+*.pyc
+__pycache__
+venv/
+env/
+.DS_Store
+instance/
+*.log
+test/
+tests/
+.vscode/
+.idea/
+node_modules/
+*.pdf
+serviceAccountKey.json
