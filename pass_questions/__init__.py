@@ -1,11 +1,9 @@
 import os
-import json
-from pathlib import Path
-from flask import Flask, send_from_directory, session
+from flask import Flask, send_from_directory, session, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 from datetime import datetime, timedelta
 
 # ------------------- GLOBAL OBJECTS -------------------
@@ -28,9 +26,12 @@ class FirebaseUser(UserMixin):
         
     @property
     def is_authenticated(self):
+        # Check if session is still valid
         user_session = session.get("user")
         if not user_session:
             return False
+        
+        # Check if session ID matches
         return user_session.get("session_id") == self.session_id
         
     @property
@@ -40,75 +41,6 @@ class FirebaseUser(UserMixin):
     @property
     def is_anonymous(self):
         return False
-
-# ------------------- FIREBASE CREDENTIALS HELPER -------------------
-def get_firebase_credentials():
-    """Get Firebase credentials for Cloud Run"""
-    
-    # 1. Try environment variable first (Cloud Run Secret)
-    env_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON')
-    if env_json:
-        try:
-            cred_dict = json.loads(env_json)
-            print("✅ Using Firebase credentials from environment variable")
-            return credentials.Certificate(cred_dict)
-        except json.JSONDecodeError as e:
-            print(f"❌ Error parsing JSON: {e}")
-    
-    # 2. Try Cloud Run default credentials
-    if os.getenv('K_SERVICE'):  # Running on Cloud Run
-        try:
-            print("🚀 Running on Cloud Run - using default credentials")
-            return credentials.ApplicationDefault()
-        except Exception as e:
-            print(f"❌ Default credentials failed: {e}")
-    
-    # 3. Try local file (for development)
-    local_paths = [
-        'serviceAccountKey.json',
-        'firebase_credentials.json',
-        os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json'),
-        '/etc/secrets/serviceAccountKey.json',  # Cloud Run Secret path
-    ]
-    
-    for path in local_paths:
-        if Path(path).exists():
-            print(f"✅ Using Firebase credentials from file: {path}")
-            return credentials.Certificate(path)
-    
-    # 4. Try individual environment variables
-    project_id = os.getenv('FIREBASE_PROJECT_ID')
-    private_key = os.getenv('FIREBASE_PRIVATE_KEY')
-    client_email = os.getenv('FIREBASE_CLIENT_EMAIL')
-    
-    if all([project_id, private_key, client_email]):
-        try:
-            cred_dict = {
-                "type": "service_account",
-                "project_id": project_id,
-                "private_key_id": os.getenv('FIREBASE_PRIVATE_KEY_ID', ''),
-                "private_key": private_key.replace('\\n', '\n'),
-                "client_email": client_email,
-                "client_id": os.getenv('FIREBASE_CLIENT_ID', ''),
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "client_x509_cert_url": os.getenv('FIREBASE_CLIENT_X509_CERT_URL', ''),
-                "universe_domain": "googleapis.com"
-            }
-            print("✅ Using Firebase credentials from individual env vars")
-            return credentials.Certificate(cred_dict)
-        except Exception as e:
-            print(f"❌ Error creating credentials: {e}")
-    
-    # No credentials found
-    raise FileNotFoundError(
-        "❌ Firebase credentials not found!\n\n"
-        "Please do ONE of these:\n"
-        "1. Add serviceAccountKey.json to your project root\n"
-        "2. Set FIREBASE_SERVICE_ACCOUNT_JSON environment variable\n"
-        "3. On Cloud Run, add the credentials as a secret"
-    )
 
 # ------------------- CREATE APP -------------------
 def create_app():
@@ -123,20 +55,12 @@ def create_app():
     )
 
     # ------------------- CONFIG -------------------
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'supersecretkey-dev-change-in-production')
-    
-    # Database configuration - use environment variable or SQLite
-    if os.getenv('DATABASE_URL'):
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-    else:
-        # Use relative path for SQLite
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/passquestion.db'
-    
+    app.config['SECRET_KEY'] = 'supersecretkey'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///passquestion.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
-    # Create instance directory for SQLite
-    instance_dir = os.path.join(BASE_DIR, 'instance')
-    os.makedirs(instance_dir, exist_ok=True)
+    # Add Firebase Storage bucket configuration
+    app.config['FIREBASE_STORAGE_BUCKET'] = os.environ.get('FIREBASE_STORAGE_BUCKET', 'pastquestion-3b0cc.firebasestorage.app')
 
     # ------------------- DATABASE -------------------
     db.init_app(app)
@@ -146,66 +70,51 @@ def create_app():
     login_manager.login_view = 'auth.login'
 
     # ------------------- FIREBASE -------------------
-    try:
-        if not firebase_admin._apps:
-            # Set gRPC environment variables for better performance
-            os.environ['GRPC_POLL_STRATEGY'] = 'poll'
-            os.environ['GRPC_ENABLE_FORK_SUPPORT'] = 'false'
-            
-            cred = get_firebase_credentials()
-            firebase_admin.initialize_app(cred)
-            app.logger.info("✅ Firebase initialized successfully")
-    except Exception as e:
-        app.logger.error(f"❌ Firebase initialization failed: {e}")
-        # Don't crash the app, but log the error
-        app.logger.warning("⚠️ Continuing without Firebase - some features disabled")
+    cred_path = os.path.join(BASE_DIR, "serviceAccountKey.json")
+    if not firebase_admin._apps:  # prevent double init
+        cred = credentials.Certificate(cred_path)
+        
+        # Initialize Firebase with storage bucket
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': app.config['FIREBASE_STORAGE_BUCKET']
+        })
     
     # Initialize Firestore
-    try:
-        firestore_db = firestore.client()
-        app.logger.info("✅ Firestore client initialized")
-    except Exception as e:
-        app.logger.error(f"❌ Firestore initialization failed: {e}")
-        firestore_db = None
+    firestore_db = firestore.client()
+    
+    # Initialize Storage bucket (will be used in routes)
+    storage_bucket = storage.bucket()
 
     # ------------------- USER LOADER -------------------
     @login_manager.user_loader
     def load_user(user_id):
         try:
+            # Get user from Flask session first
             user_session = session.get("user")
             
             if not user_session:
                 return None
             
+            # Verify session ID matches
             if user_session.get("uid") != user_id:
                 return None
             
-            # Skip Firebase check if Firestore not available
-            if firestore_db is None:
-                # Return user from session only
-                return FirebaseUser(
-                    uid=user_id,
-                    email=user_session.get("email", ""),
-                    username=user_session.get("username", ""),
-                    role=user_session.get("role", "user"),
-                    paid=user_session.get("paid", False),
-                    session_id=user_session.get("session_id")
-                )
-            
-            # Get user from Firestore
+            # Get user from Firestore for latest data
             user_doc = firestore_db.collection("users").document(user_id).get()
             
             if not user_doc.exists:
                 return None
             
             user_data = user_doc.to_dict()
+            
+            # Check if session is still valid
             active_session_id = user_data.get("active_session_id")
             session_created = user_data.get("session_created")
             
             if not active_session_id or active_session_id != user_session.get("session_id"):
                 return None
             
-            # Check session expiration
+            # Check session expiration (24 hours)
             if session_created:
                 if hasattr(session_created, 'timestamp'):
                     session_time = session_created.replace(tzinfo=None)
@@ -253,40 +162,69 @@ def create_app():
             mimetype='image/png'
         )
 
-    # ------------------- BLUEPRINTS -------------------
-    try:
-        from pass_questions.routes.auth_routes import auth_bp
-        from pass_questions.routes.admin_routes import admin_bp
-        from pass_questions.routes.main_routes import main_bp
+    @app.route('/apple-touch-icon-precomposed.png')
+    def apple_touch_icon_precomposed():
+        return send_from_directory(
+            STATIC_FOLDER,
+            'apple-touch-icon.png',
+            mimetype='image/png'
+        )
 
-        app.register_blueprint(auth_bp, url_prefix='/auth')
-        app.register_blueprint(admin_bp, url_prefix='/admin')
-        app.register_blueprint(main_bp, url_prefix='/')
-        
-        app.logger.info("✅ Blueprints registered successfully")
-    except ImportError as e:
-        app.logger.error(f"❌ Failed to import blueprints: {e}")
-        # Create minimal routes
-        @app.route('/')
-        def home():
-            return "App is running. Check blueprint imports."
+    @app.route('/android-chrome-<int:size>.png')
+    def android_chrome_icon(size):
+        filename = f'android-chrome-{size}x{size}.png'
+        return send_from_directory(
+            STATIC_FOLDER,
+            filename,
+            mimetype='image/png'
+        )
 
-    # ------------------- CREATE TABLES -------------------
-    with app.app_context():
-        try:
-            db.create_all()
-            app.logger.info("✅ Database tables created/verified")
-        except Exception as e:
-            app.logger.error(f"❌ Database table creation failed: {e}")
+    @app.route('/favicon-<int:size>.png')
+    def favicon_png(size):
+        filename = f'favicon-{size}x{size}.png'
+        return send_from_directory(
+            STATIC_FOLDER,
+            filename,
+            mimetype='image/png'
+        )
+
+    # ------------------- CONTEXT PROCESSORS -------------------
+    @app.context_processor
+    def inject_firebase_config():
+        """Inject Firebase configuration for client-side use"""
+        return {
+            'firebase_config': {
+                'apiKey': os.environ.get('FIREBASE_API_KEY'),
+                'authDomain': os.environ.get('FIREBASE_AUTH_DOMAIN'),
+                'projectId': os.environ.get('FIREBASE_PROJECT_ID'),
+                'storageBucket': app.config['FIREBASE_STORAGE_BUCKET'],
+                'messagingSenderId': os.environ.get('FIREBASE_MESSAGING_SENDER_ID'),
+                'appId': os.environ.get('FIREBASE_APP_ID')
+            }
+        }
 
     # ------------------- ERROR HANDLERS -------------------
     @app.errorhandler(404)
-    def not_found(e):
-        return "Page not found", 404
-    
+    def page_not_found(e):
+        return render_template('404.html'), 404
+
     @app.errorhandler(500)
-    def server_error(e):
-        app.logger.error(f"Server error: {e}")
-        return "Internal server error", 500
+    def internal_server_error(e):
+        return render_template('500.html'), 500
+
+    # ------------------- BLUEPRINTS -------------------
+    from pass_questions.routes.auth_routes import auth_bp
+    from pass_questions.routes.admin_routes import admin_bp
+    from pass_questions.routes.main_routes import main_bp
+     # If you have payment routes
+
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(main_bp, url_prefix='/')
+    
+
+    # ------------------- CREATE TABLES (for non-user data) -------------------
+    with app.app_context():
+        db.create_all()
 
     return app

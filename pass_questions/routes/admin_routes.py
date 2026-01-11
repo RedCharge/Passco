@@ -14,8 +14,6 @@ import requests
 import json
 import traceback
 from dotenv import load_dotenv
-from google.cloud import storage
-import uuid
 
 # Load environment variables
 load_dotenv()
@@ -26,55 +24,8 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 ALLOWED_EXTENSIONS = {"pdf"}
 UPLOAD_ROOT = os.path.join("static", "pdfs")
 
-# Cloud Storage settings
-GCS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME', 'passco-app-files')
-USE_CLOUD_STORAGE = os.getenv('USE_CLOUD_STORAGE', 'false').lower() == 'true'
-
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-
-# ----------------- CLOUD STORAGE FUNCTIONS -----------------
-def upload_to_cloud_storage(file, destination_path):
-    """Upload file to Google Cloud Storage"""
-    try:
-        client = storage.Client()
-        bucket = client.bucket(GCS_BUCKET_NAME)
-        blob = bucket.blob(destination_path)
-        
-        file.seek(0)  # Reset file pointer
-        blob.upload_from_file(file, content_type=file.content_type)
-        
-        # Make it publicly accessible
-        blob.make_public()
-        
-        return blob.public_url
-    except Exception as e:
-        print(f"Error uploading to Cloud Storage: {e}")
-        # Fallback to local storage
-        return None
-
-def delete_from_cloud_storage(file_url):
-    """Delete file from Google Cloud Storage"""
-    try:
-        if not file_url or 'storage.googleapis.com' not in file_url:
-            return False
-        
-        # Extract blob path from URL
-        # URL format: https://storage.googleapis.com/BUCKET_NAME/path/to/file
-        parts = file_url.split('storage.googleapis.com/')
-        if len(parts) > 1:
-            bucket_and_path = parts[1]
-            bucket_name = bucket_and_path.split('/')[0]
-            blob_path = '/'.join(bucket_and_path.split('/')[1:])
-            
-            client = storage.Client()
-            bucket = client.bucket(bucket_name)
-            blob = bucket.blob(blob_path)
-            blob.delete()
-            return True
-    except Exception as e:
-        print(f"Error deleting from Cloud Storage: {e}")
-    return False
 
 # ----------------- AUTH -----------------
 def require_login(func):
@@ -154,6 +105,9 @@ def get_admin_stats():
             total_resources = len(list(uploads_ref)) * 2
         except Exception as e:
             print(f"Error counting resources from Firestore: {e}")
+            if os.path.exists(UPLOAD_ROOT):
+                for root, dirs, files in os.walk(UPLOAD_ROOT):
+                    total_resources += len([f for f in files if f.endswith('.pdf')])
 
         today = datetime.now().date()
         new_signups_today = 0
@@ -220,21 +174,24 @@ def dashboard():
 
         uploads = []
         try:
-            # Get uploads from Firestore
-            uploads_ref = db.collection("admin_uploads").stream()
-            for doc in uploads_ref:
-                exam_data = doc.to_dict()
-                uploads.append({
-                    "id": doc.id,
-                    "program": exam_data.get("program", "Unknown"),
-                    "course": exam_data.get("course", "Unknown"),
-                    "year": exam_data.get("year", "Unknown"),
-                    "filename": exam_data.get("questionsFileName", ""),
-                    "path": exam_data.get("questionsFilePath", ""),
-                    "uploaded_at": exam_data.get("uploadDate", "")
-                })
+            if os.path.exists(UPLOAD_ROOT):
+                for root, _, files in os.walk(UPLOAD_ROOT):
+                    for file in files:
+                        if file.endswith(".pdf"):
+                            abs_path = os.path.join(root, file)
+                            rel_path = os.path.relpath(abs_path, "static")
+                            parts = rel_path.split(os.sep)
+
+                            uploads.append({
+                                "program": parts[1] if len(parts) > 1 else "Unknown",
+                                "course": parts[2] if len(parts) > 2 else "Unknown",
+                                "year": parts[3] if len(parts) > 3 else "Unknown",
+                                "filename": file,
+                                "path": f"/static/{rel_path.replace(os.sep, '/')}",
+                                "uploaded_at": datetime.fromtimestamp(os.path.getmtime(abs_path)).strftime("%Y-%m-%d %H:%M")
+                            })
         except Exception as e:
-            print(f"Error fetching uploads: {e}")
+            print(f"Error scanning uploads: {e}")
 
         return render_template("dashboard_admin.html", 
                              user=user, 
@@ -326,45 +283,21 @@ def upload_exam():
         return redirect(url_for("admin.dashboard"))
 
     try:
-        # Create safe filenames
+        base_dir = os.path.join(UPLOAD_ROOT, program, f"Level_{level}", f"Semester_{semester}", course, year)
+        os.makedirs(base_dir, exist_ok=True)
+        
         questions_filename = secure_filename(questions_file.filename)
+        questions_path = os.path.join(base_dir, f"questions_{questions_filename}")
+        questions_file.save(questions_path)
+        
         answers_filename = secure_filename(answers_file.filename)
-        
-        # Create path structure
-        base_path = f"{program}/Level_{level}/Semester_{semester}/{course}/{year}"
-        
-        questions_url = None
-        answers_url = None
-        
-        if USE_CLOUD_STORAGE:
-            # Upload to Google Cloud Storage
-            questions_gcs_path = f"{base_path}/questions_{questions_filename}"
-            answers_gcs_path = f"{base_path}/answers_{answers_filename}"
-            
-            questions_url = upload_to_cloud_storage(questions_file, questions_gcs_path)
-            answers_url = upload_to_cloud_storage(answers_file, answers_gcs_path)
-            
-            if not questions_url or not answers_url:
-                flash("Failed to upload files to cloud storage.", "error")
-                return redirect(url_for("admin.dashboard"))
-        else:
-            # Local storage
-            base_dir = os.path.join(UPLOAD_ROOT, program, f"Level_{level}", f"Semester_{semester}", course, year)
-            os.makedirs(base_dir, exist_ok=True)
-            
-            questions_path = os.path.join(base_dir, f"questions_{questions_filename}")
-            answers_path = os.path.join(base_dir, f"answers_{answers_filename}")
-            
-            questions_file.save(questions_path)
-            answers_file.save(answers_path)
-            
-            # Create URLs for local files
-            questions_url = f"/static/pdfs/{program}/Level_{level}/Semester_{semester}/{course}/{year}/questions_{questions_filename}"
-            answers_url = f"/static/pdfs/{program}/Level_{level}/Semester_{semester}/{course}/{year}/answers_{answers_filename}"
+        answers_path = os.path.join(base_dir, f"answers_{answers_filename}")
+        answers_file.save(answers_path)
 
         db = firestore.client()
         user = session.get("user")
         
+        import uuid
         doc_id = f"{program[:3]}-{level}-{semester}-{course[:3]}-{str(uuid.uuid4())[:8]}"
         
         exam_data = {
@@ -377,8 +310,8 @@ def upload_exam():
             "examName": f"{course} - {year}",
             "questionsFileName": questions_filename,
             "answersFileName": answers_filename,
-            "questionsFilePath": questions_url,
-            "answersFilePath": answers_url,
+            "questionsFilePath": questions_path,
+            "answersFilePath": answers_path,
             "uploadDate": datetime.now().isoformat(),
             "uploadedBy": user.get("uid"),
             "uploadedByName": user.get("username") or user.get("email", "Admin")
@@ -463,7 +396,7 @@ def update_user_payment(user_id):
 @require_login
 @admin_required
 def delete_exam(exam_id):
-    """Delete an uploaded exam and its associated files"""
+    """Delete an uploaded exam and its associated PDF files"""
     try:
         db = firestore.client()
         exam_doc = db.collection("admin_uploads").document(exam_id).get()
@@ -477,48 +410,48 @@ def delete_exam(exam_id):
         
         deleted_files = []
         
-        # Delete files from storage
-        if questions_path:
-            if 'storage.googleapis.com' in questions_path:
-                if delete_from_cloud_storage(questions_path):
-                    deleted_files.append("questions PDF from cloud storage")
-            elif os.path.exists(questions_path):
-                os.remove(questions_path)
-                deleted_files.append("questions PDF")
+        if questions_path and os.path.exists(questions_path):
+            os.remove(questions_path)
+            deleted_files.append("questions PDF")
         
-        if answers_path:
-            if 'storage.googleapis.com' in answers_path:
-                if delete_from_cloud_storage(answers_path):
-                    deleted_files.append("answers PDF from cloud storage")
-            elif os.path.exists(answers_path):
-                os.remove(answers_path)
-                deleted_files.append("answers PDF")
+        if answers_path and os.path.exists(answers_path):
+            os.remove(answers_path)
+            deleted_files.append("answers PDF")
         
-        # Delete related data
+        # NEW: Delete exam data from user_exams collection
         try:
-            # Delete from user_exams
+            # Find all user exams that reference this exam_id
             user_exams_ref = db.collection("user_exams").where("exam_id", "==", exam_id).stream()
+            
             deleted_user_exams = 0
             for user_exam_doc in user_exams_ref:
                 db.collection("user_exams").document(user_exam_doc.id).delete()
                 deleted_user_exams += 1
             
-            # Delete from user_practice
+            print(f"Deleted {deleted_user_exams} user exam records")
+        except Exception as e:
+            print(f"Error deleting user exam records: {e}")
+        
+        # NEW: Delete exam data from user_practice collection
+        try:
+            # Find all practice sessions that reference this exam
             user_practice_ref = db.collection("user_practice").where("exam_id", "==", exam_id).stream()
+            
             deleted_practice_sessions = 0
             for practice_doc in user_practice_ref:
                 db.collection("user_practice").document(practice_doc.id).delete()
                 deleted_practice_sessions += 1
             
+            print(f"Deleted {deleted_practice_sessions} practice session records")
         except Exception as e:
-            print(f"Error deleting related data: {e}")
+            print(f"Error deleting practice session records: {e}")
         
         # Delete the main exam document
         db.collection("admin_uploads").document(exam_id).delete()
         
         message = f"Exam deleted successfully"
         if deleted_files:
-            message += f" ({', '.join(deleted_files)})"
+            message += f" ({', '.join(deleted_files)} removed)"
         
         return jsonify({"success": True, "message": message})
         
@@ -724,12 +657,65 @@ def manage_questions():
                 return jsonify({"error": "Question ID required", "success": False}), 400
             
             try:
+                # NEW: Delete question from user quiz attempts
+                try:
+                    # Find all quiz attempts that include this question
+                    user_attempts_ref = db_firestore.collection("user_quiz_attempts").stream()
+                    
+                    deleted_attempts = 0
+                    for attempt_doc in user_attempts_ref:
+                        attempt_data = attempt_doc.to_dict()
+                        questions_list = attempt_data.get("questions", [])
+                        
+                        # Remove the question if it exists in the attempt
+                        updated_questions = []
+                        question_removed = False
+                        
+                        for q in questions_list:
+                            if isinstance(q, dict) and q.get("questionId") == question_id:
+                                question_removed = True
+                                continue
+                            updated_questions.append(q)
+                        
+                        # If question was removed, update the attempt
+                        if question_removed:
+                            db_firestore.collection("user_quiz_attempts").document(attempt_doc.id).update({
+                                "questions": updated_questions
+                            })
+                            deleted_attempts += 1
+                    
+                    print(f"Removed question from {deleted_attempts} user quiz attempts")
+                except Exception as e:
+                    print(f"Error updating user quiz attempts: {e}")
+                
+                # NEW: Delete question from practice sessions
+                try:
+                    # Find all practice sessions that include this question
+                    practice_sessions_ref = db_firestore.collection("user_practice").stream()
+                    
+                    updated_sessions = 0
+                    for session_doc in practice_sessions_ref:
+                        session_data = session_doc.to_dict()
+                        session_questions = session_data.get("questions", [])
+                        
+                        # Remove the question if it exists in the session
+                        if question_id in session_questions:
+                            session_questions.remove(question_id)
+                            db_firestore.collection("user_practice").document(session_doc.id).update({
+                                "questions": session_questions
+                            })
+                            updated_sessions += 1
+                    
+                    print(f"Removed question from {updated_sessions} practice sessions")
+                except Exception as e:
+                    print(f"Error updating practice sessions: {e}")
+                
                 # Delete the question from quiz_questions collection
                 db_firestore.collection("quiz_questions").document(question_id).delete()
                 
                 return jsonify({
                     "success": True,
-                    "message": "Question deleted successfully"
+                    "message": "Question deleted successfully from admin and user pages"
                 })
                 
             except Exception as e:
@@ -1479,6 +1465,9 @@ def get_verification_codes_stats():
             "used_value": 0,
             "error": str(e)
         })
+
+
+# Add this to your admin_routes.py or create a new route file
 
 @admin_bp.route("/api/questions")
 @require_login
