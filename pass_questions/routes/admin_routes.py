@@ -9,7 +9,6 @@ import os
 from datetime import datetime, timedelta
 import random
 import string
-import PyPDF2
 import requests
 import json
 import traceback
@@ -727,100 +726,6 @@ def manage_questions():
             "success": False
         }), 500
 
-# ----------------- DEEPSEEK AI FUNCTIONS -----------------
-def extract_text_from_pdf(pdf_file):
-    """Extract text from uploaded PDF file"""
-    try:
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
-        text = ""
-        for page_num in range(len(pdf_reader.pages)):
-            page = pdf_reader.pages[page_num]
-            text += page.extract_text()
-        return text
-    except Exception as e:
-        print(f"Error extracting PDF text: {e}")
-        return None
-
-def generate_quiz_questions_with_deepseek(text, num_questions=10, difficulty="medium"):
-    """Generate quiz questions from text using DeepSeek AI"""
-    try:
-        api_key = os.getenv("DEEPSEEK_API_KEY")
-        if not api_key:
-            raise ValueError("DeepSeek API key not found in environment variables")
-        
-        prompt = f"""
-        Based on the following text content, generate {num_questions} multiple-choice quiz questions.
-        Difficulty level: {difficulty}
-        
-        Text content:
-        {text[:3000]}
-        
-        Generate questions in this exact JSON format:
-        {{
-            "questions": [
-                {{
-                    "question": "The question text here?",
-                    "options": ["Option A", "Option B", "Option C", "Option D"],
-                    "correctAnswer": 0,
-                    "explanation": "Brief explanation of the correct answer",
-                    "difficulty": "{difficulty}"
-                }}
-            ]
-        }}
-        
-        Rules:
-        1. Each question must be based on the provided text
-        2. Options must be plausible but only one correct
-        3. correctAnswer must be 0, 1, 2, or 3 (corresponding to options A-D)
-        4. Return ONLY the JSON, no other text
-        """
-        
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": "deepseek-chat",
-            "messages": [
-                {"role": "system", "content": "You are a quiz question generator. Always respond with valid JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.7,
-            "max_tokens": 4000
-        }
-        
-        response = requests.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            content = result["choices"][0]["message"]["content"]
-            
-            try:
-                start_idx = content.find('{')
-                end_idx = content.rfind('}') + 1
-                json_str = content[start_idx:end_idx]
-                
-                questions_data = json.loads(json_str)
-                return questions_data.get("questions", [])
-                
-            except json.JSONDecodeError as e:
-                print(f"Error parsing JSON from AI response: {e}")
-                print(f"Raw response: {content}")
-                return []
-                
-        else:
-            print(f"DeepSeek API error: {response.status_code} - {response.text}")
-            return []
-            
-    except Exception as e:
-        print(f"Error generating questions: {e}")
-        return []
 
 # ----------------- AI QUESTION GENERATION ROUTES -----------------
 @admin_bp.route("/ai-generate-questions")
